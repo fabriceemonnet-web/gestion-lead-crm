@@ -396,7 +396,7 @@ function doImport(){
   if(!raw){alert('Colle d\'abord le JSON Wyldde.');return;}
   let data;
   try{data=JSON.parse(raw);}catch(e){alert('JSON invalide. Vérifie que tu as bien copié toute la réponse depuis l\'onglet Response.');return;}
-  const items=Array.isArray(data)?data:(data.data||data.conversations||data.crushes||data.results||[]);
+  const items=Array.isArray(data)?data:(data.data&&data.data.conversations?data.data.conversations:data.data&&Array.isArray(data.data)?data.data:data.conversations||data.crushes||data.results||[]);
   if(!items.length){alert('Aucun profil trouvé dans ce JSON.');return;}
   let added=0, skipped=0;
   items.forEach(item=>{

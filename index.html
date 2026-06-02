@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wyldde CRM</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.x/dist/tabler-icons.min.css">
+<style>
+:root {
+  --bg: #ffffff; --bg2: #f5f5f3; --bg3: #eeece8;
+  --text: #1a1a1a; --text2: #666660; --text3: #999993;
+  --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.22);
+  --radius: 8px; --radius-lg: 12px;
+  --amber: #EF9F27; --green: #1D9E75; --purple: #534AB7; --red: #A32D2D;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1c1a; --bg2: #262624; --bg3: #2e2e2b;
+    --text: #f0ede8; --text2: #999993; --text3: #666660;
+    --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.2);
+  }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); min-height: 100vh; }
+input, select, textarea, button { font-family: inherit; font-size: 14px; color: var(--text); background: var(--bg); border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 7px 10px; outline: none; transition: border-color 0.15s; }
+input:focus, select:focus, textarea:focus { border-color: var(--text3); }
+textarea { resize: vertical; }
+
+.header { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 0 1.5rem; display: flex; align-items: center; gap: 12px; height: 52px; position: sticky; top: 0; z-index: 10; }
+.header h1 { font-size: 16px; font-weight: 600; color: var(--text); }
+.header-sub { font-size: 12px; color: var(--text3); }
+.header-actions { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+
+.container { max-width: 1200px; margin: 0 auto; padding: 1rem 1rem 3rem; }
+
+.sync-bar { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text2); margin-bottom: 12px; padding: 8px 12px; background: var(--bg); border-radius: var(--radius); border: 0.5px solid var(--border); flex-wrap: wrap; }
+.sync-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #EF9F27; }
+.sync-dot.ok { background: #1D9E75; }
+.sync-actions { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+
+.btn { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 500; padding: 7px 13px; border-radius: var(--radius); cursor: pointer; border: 0.5px solid var(--border2); background: transparent; color: var(--text2); transition: background 0.12s; white-space: nowrap; }
+.btn:hover { background: var(--bg2); }
+.btn-primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn-primary:hover { opacity: 0.85; background: var(--text); }
+.btn-drive { background: #1D9E75; color: #fff; border-color: #1D9E75; }
+.btn-drive:hover { opacity: 0.85; background: #1D9E75; }
+.btn-wyldde { background: #534AB7; color: #fff; border-color: #534AB7; }
+.btn-wyldde:hover { opacity: 0.85; background: #534AB7; }
+.btn-danger { color: #A32D2D; border-color: rgba(163,45,45,0.3); }
+.btn-danger:hover { background: #FCEBEB; }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.stat-card { background: var(--bg); border-radius: var(--radius); padding: 10px 12px; cursor: pointer; border: 2px solid transparent; transition: border-color 0.15s; }
+.stat-card:hover { border-color: var(--border2); }
+.stat-card.active { border-color: var(--text); }
+.stat-card.no-click { cursor: default; }
+.stat-card .s-label { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+.stat-card .s-value { font-size: 20px; font-weight: 600; }
+.stat-card .s-hint { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+.filter-section { background: var(--bg); border-radius: var(--radius-lg); padding: 12px 14px; margin-bottom: 12px; border: 0.5px solid var(--border); }
+.filter-section summary { font-size: 13px; font-weight: 500; cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; }
+.filter-section summary::-webkit-details-marker { display: none; }
+.filter-section summary::after { content: "›"; font-size: 18px; color: var(--text3); transition: transform 0.2s; }
+details[open] summary::after { transform: rotate(90deg); }
+.filter-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin-top: 12px; }
+.filter-grid select { width: 100%; }
+.filter-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+.dept-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.dept-pill { font-size: 12px; padding: 4px 12px; border-radius: 999px; border: 0.5px solid var(--border2); background: var(--bg); color: var(--text2); cursor: pointer; transition: all 0.1s; }
+.dept-pill:hover { border-color: var(--text); color: var(--text); }
+.dept-pill.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+.section-label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; margin: 12px 0 5px; }
+
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 1rem; }
+.toolbar input { flex: 1; min-width: 200px; }
+
+.active-filter-bar { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; font-size: 12px; color: var(--text2); flex-wrap: wrap; }
+.filter-pill { display: inline-flex; align-items: center; gap: 4px; background: var(--text); color: var(--bg); border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 500; cursor: pointer; border: none; }
+
+.profiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 10px; }
+.profile-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; transition: border-color 0.15s; }
+.profile-card:hover { border-color: var(--border2); }
+.card-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+.avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+.card-meta { flex: 1; min-width: 0; }
+.card-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-name a { color: var(--text3); margin-left: 4px; font-size: 11px; text-decoration: none; }
+.card-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.badges { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
+.badge-recu { background: #E1F5EE; color: #0F6E56; }
+.badge-envoye { background: #E6F1FB; color: #185FA5; }
+.badge-partage { background: #EEEDFE; color: #534AB7; }
+.badge-non { background: var(--bg2); color: var(--text3); }
+.badge-lcs { background: #FAEEDA; color: #854F0B; }
+.statut-badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
+.s-cible { background: #FAEEDA; color: #854F0B; }
+.s-discussion { background: #E6F1FB; color: #185FA5; }
+.s-bof { background: #F1EFE8; color: #5F5E5A; }
+.s-rencontre { background: #EAF3DE; color: #3B6D11; }
+.s-virer { background: #FCEBEB; color: #A32D2D; }
+.s-nouveau { background: var(--bg2); color: var(--text2); }
+
+.note-bar { display: flex; align-items: center; gap: 6px; margin: 8px 0; }
+.stars { display: flex; gap: 1px; }
+.star { font-size: 15px; cursor: pointer; color: var(--border2); transition: color 0.1s; line-height: 1; }
+.star.on { color: #EF9F27; }
+.tags-row { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+.tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--bg2); color: var(--text2); border: 0.5px solid var(--border); }
+.card-comment { font-size: 12px; color: var(--text2); background: var(--bg2); border-radius: var(--radius); padding: 6px 10px; margin: 6px 0; line-height: 1.5; font-style: italic; cursor: pointer; }
+.card-comment.empty { color: var(--text3); }
+.card-footer { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.empty-state { text-align: center; padding: 3rem 1rem; color: var(--text2); font-size: 14px; grid-column: 1/-1; }
+
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
+.modal { background: var(--bg); border-radius: var(--radius-lg); padding: 1.5rem; width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; border: 0.5px solid var(--border2); }
+.modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 1rem; }
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+.field input, .field select, .field textarea { width: 100%; }
+.field textarea { height: 72px; }
+.modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1rem; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; padding-top: 18px; }
+
+.import-steps { font-size: 12px; color: var(--text2); line-height: 2.2; margin-bottom: 10px; background: var(--bg2); padding: 10px 14px; border-radius: var(--radius); }
+.import-steps b { color: var(--text); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header h1" style="font-size:16px;font-weight:600">Wyldde CRM</div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-drive" id="btnDrive" onclick="driveAction()"><i class="ti ti-brand-google-drive"></i> <span id="btnDriveLabel">Connecter Drive</span></button>
+    <button class="btn" id="btnSave" onclick="saveToDrive()" style="display:none"><i class="ti ti-cloud-upload"></i> Sauvegarder</button>
+    <button class="btn" id="btnLoad" onclick="loadFromDrive()" style="display:none"><i class="ti ti-cloud-download"></i> Charger</button>
+    <button class="btn btn-wyldde" onclick="openImport()"><i class="ti ti-download"></i> Importer Wyldde</button>
+    <button class="btn btn-primary" onclick="openModal()"><i class="ti ti-plus"></i> Ajouter</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="sync-bar">
+    <span class="sync-dot" id="syncDot"></span>
+    <span id="syncStatus">Non connecté à Google Drive</span>
+    <span style="margin-left:auto;font-size:11px;color:var(--text3)" id="lastSync"></span>
+  </div>
+
+  <div class="stats" id="statsBar"></div>
+
+  <details class="filter-section">
+    <summary>Filtres <span id="filterCount" style="font-size:11px;color:var(--text3);font-weight:400;margin-left:6px"></span></summary>
+    <div class="filter-grid">
+      <div>
+        <div class="section-label">Statut relation</div>
+        <select id="filterStatut" onchange="render()">
+          <option value="">Tous</option>
+          <option value="nouveau">Nouveau</option><option value="cible">Cible absolue</option>
+          <option value="discussion">En discussion</option><option value="rencontre">Rencontré</option>
+          <option value="bof">Déjà vu, bof</option><option value="virer">On vire</option>
+        </select>
+      </div>
+      <div>
+        <div class="section-label">Coup de cœur</div>
+        <select id="filterCDC" onchange="render()">
+          <option value="">Tous</option><option value="non">Sans CDC</option>
+          <option value="recu">Reçu</option><option value="envoye">Envoyé</option><option value="partage">Partagé</option>
+        </select>
+      </div>
+      <div>
+        <div class="section-label">Vous cherchez</div>
+        <select id="filterVousCherchez" onchange="render()">
+          <option value="">Tous</option>
+          <option>Couples hétéros</option><option>Couples F Bi</option><option>Couples H Bi</option><option>Couples Bi</option>
+          <option>Femmes hétéros</option><option>Femmes Bi</option><option>Lesbiennes</option>
+          <option>Hommes hétéros</option><option>Hommes Bi</option><option>Gays</option><option>Travestis</option><option>Transgenres</option>
+        </select>
+      </div>
+      <div>
+        <div class="section-label">Qui recherchent</div>
+        <select id="filterQuiRecherche" onchange="render()">
+          <option value="">Tous</option>
+          <option>Couples hétéros</option><option>Couples F Bi</option><option>Couples H Bi</option><option>Couples Bi</option>
+          <option>Femmes hétéros</option><option>Femmes Bi</option><option>Lesbiennes</option>
+          <option>Hommes hétéros</option><option>Hommes Bi</option><option>Gays</option><option>Travestis</option><option>Transgenres</option>
+        </select>
+      </div>
+    </div>
+    <div class="section-label">Département(s)</div>
+    <div class="dept-pills" id="deptPills"></div>
+    <div class="filter-row">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="filterLCS" onchange="render()"> LCS uniquement</label>
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <select id="sortBy" onchange="render()">
+          <option value="date">Récents d'abord</option>
+          <option value="note">Note décroissante</option>
+          <option value="pseudo">Pseudo A-Z</option>
+        </select>
+        <button class="btn" onclick="resetFilters()">Réinitialiser</button>
+      </div>
+    </div>
+  </details>
+
+  <div class="toolbar">
+    <input type="text" id="search" placeholder="Rechercher pseudo, ville, département, tag..." oninput="render()">
+  </div>
+
+  <div id="activeFilterBar" class="active-filter-bar"></div>
+  <div class="profiles" id="profilesGrid"></div>
+</div>
+
+<!-- Modal fiche profil -->
+<div class="modal-bg" id="modalBg" style="display:none" onclick="closeModalBg(event)">
+  <div class="modal">
+    <h3 id="modalTitle">Nouveau profil</h3>
+    <div class="form-grid">
+      <div class="field"><label>Pseudo *</label><input type="text" id="f_pseudo" placeholder="ex. NaughtyPoppies"></div>
+      <div class="field"><label>Lien profil Wyldde</label><input type="text" id="f_lien" placeholder="https://wyldde.com/..."></div>
+      <div class="field"><label>Type de profil</label>
+        <select id="f_type">
+          <option value="">—</option>
+          <option>Couples hétéros</option><option>Couples F Bi</option><option>Couples H Bi</option><option>Couples Bi</option>
+          <option>Femmes hétéros</option><option>Femmes Bi</option><option>Lesbiennes</option>
+          <option>Hommes hétéros</option><option>Hommes Bi</option><option>Gays</option><option>Travestis</option><option>Transgenres</option>
+        </select>
+      </div>
+      <div class="field"><label>Département</label><input type="text" id="f_dept" placeholder="75"></div>
+      <div class="field"><label>Ville</label><input type="text" id="f_ville" placeholder="Paris"></div>
+      <div class="field"><label>Âge(s)</label><input type="text" id="f_ages" placeholder="45/43"></div>
+      <div class="field"><label>Coup de cœur</label>
+        <select id="f_cdc">
+          <option value="non">Aucun</option><option value="recu">Reçu</option>
+          <option value="envoye">Envoyé</option><option value="partage">Partagé</option>
+        </select>
+      </div>
+      <div class="field"><label>Statut relation</label>
+        <select id="f_statut">
+          <option value="nouveau">Nouveau</option><option value="cible">Cible absolue</option>
+          <option value="discussion">En discussion</option><option value="rencontre">Rencontré</option>
+          <option value="bof">Déjà vu, bof</option><option value="virer">On vire</option>
+        </select>
+      </div>
+      <div class="field"><label>Note /10</label><input type="number" id="f_note" min="0" max="10" step="1" placeholder="7"></div>
+      <div class="field"><label class="checkbox-row"><input type="checkbox" id="f_lcs"> LCS (libre cette semaine)</label></div>
+    </div>
+    <div class="section-label">Recherches</div>
+    <div class="form-grid">
+      <div class="field"><label>Vous cherchez</label>
+        <select id="f_vousCherchez">
+          <option value="">—</option>
+          <option>Couples hétéros</option><option>Couples F Bi</option><option>Couples H Bi</option><option>Couples Bi</option>
+          <option>Femmes hétéros</option><option>Femmes Bi</option><option>Lesbiennes</option>
+          <option>Hommes hétéros</option><option>Hommes Bi</option><option>Gays</option><option>Travestis</option><option>Transgenres</option>
+        </select>
+      </div>
+      <div class="field"><label>Qui recherchent</label>
+        <select id="f_quiRecherche">
+          <option value="">—</option>
+          <option>Couples hétéros</option><option>Couples F Bi</option><option>Couples H Bi</option><option>Couples Bi</option>
+          <option>Femmes hétéros</option><option>Femmes Bi</option><option>Lesbiennes</option>
+          <option>Hommes hétéros</option><option>Hommes Bi</option><option>Gays</option><option>Travestis</option><option>Transgenres</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>Tags perso (séparés par des virgules)</label><input type="text" id="f_tags" placeholder="chic, poils, vulgaire, discrets, naturistes..."></div>
+    <div class="field"><label>Commentaire libre</label><textarea id="f_comment" placeholder="Impressions, contexte de la rencontre, détails..."></textarea></div>
+    <div class="field"><label>Date dernier contact</label><input type="date" id="f_date"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="saveProfile()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal import Wyldde -->
+<div class="modal-bg" id="importBg" style="display:none" onclick="closeImportBg(event)">
+  <div class="modal" style="max-width:580px">
+    <h3>Importer depuis Wyldde</h3>
+    <div class="import-steps">
+      <b>1.</b> Va sur Wyldde, connecte-toi et ouvre les DevTools (F12) → onglet <b>Network</b>.<br>
+      <b>2.</b> Navigue vers tes <b>coups de cœur</b> ou ta <b>messagerie</b>.<br>
+      <b>3.</b> Dans la liste, clique sur la ligne <b>crush?version=...</b> ou <b>conversations?nocache=...</b><br>
+      <b>4.</b> Onglet <b>Response</b> → sélectionne tout (Ctrl+A) → copie (Ctrl+C).<br>
+      <b>5.</b> Colle ci-dessous et clique <b>Importer</b>. Les doublons sont ignorés automatiquement.
+    </div>
+    <div class="field"><textarea id="importJson" style="height:130px;font-family:monospace;font-size:11px" placeholder="Colle le JSON Wyldde ici..."></textarea></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeImport()">Annuler</button>
+      <button class="btn btn-primary" onclick="doImport()"><i class="ti ti-download"></i> Importer</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://accounts.google.com/gsi/client" async></script>
+<script>
+const CLIENT_ID = '479015786418-c3ujd7cihmfk08nl0gkd1uvn69299baq.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+const FILE_NAME = 'wyldde_crm.json';
+
+let profiles = [], editingId = null, quickFilter = null, activeDepts = new Set();
+let driveToken = null, driveFileId = null;
+
+const COLORS = ['#E1F5EE|#0F6E56','#E6F1FB|#185FA5','#EEEDFE|#534AB7','#FAEEDA|#854F0B','#FBEAF0|#993556','#EAF3DE|#3B6D11'];
+function colorFor(p){let h=0;for(let c of p)h=(h*31+c.charCodeAt(0))%COLORS.length;return COLORS[h].split('|');}
+function initials(p){return p.slice(0,2).toUpperCase();}
+
+const CDC_L={non:'Sans CDC',recu:'CDC reçu',envoye:'CDC envoyé',partage:'CDC partagé'};
+const CDC_C={non:'badge-non',recu:'badge-recu',envoye:'badge-envoye',partage:'badge-partage'};
+const STAT_L={nouveau:'Nouveau',cible:'Cible absolue',discussion:'En discussion',rencontre:'Rencontré',bof:'Déjà vu, bof',virer:'On vire'};
+const STAT_C={nouveau:'s-nouveau',cible:'s-cible',discussion:'s-discussion',rencontre:'s-rencontre',bof:'s-bof',virer:'s-virer'};
+const PROFILE_TYPES={1:'Couples hétéros',2:'Couples F Bi',3:'Couples H Bi',4:'Couples Bi',5:'Femmes hétéros',6:'Femmes Bi',7:'Lesbiennes',8:'Hommes hétéros',9:'Hommes Bi',10:'Gays',11:'Travestis',12:'Transgenres'};
+
+// --- Drive ---
+function setSyncStatus(ok, msg){
+  document.getElementById('syncDot').className='sync-dot'+(ok?' ok':'');
+  document.getElementById('syncStatus').textContent=msg;
+  document.getElementById('btnDriveLabel').textContent=ok?'Déconnecter':'Connecter Drive';
+  document.getElementById('btnSave').style.display=ok?'':'none';
+  document.getElementById('btnLoad').style.display=ok?'':'none';
+}
+
+function driveAction(){
+  if(driveToken){driveToken=null;driveFileId=null;setSyncStatus(false,'Non connecté à Google Drive');return;}
+  const client=google.accounts.oauth2.initTokenClient({
+    client_id:CLIENT_ID, scope:SCOPES,
+    callback:(resp)=>{
+      if(resp.error){setSyncStatus(false,'Erreur de connexion : '+resp.error);return;}
+      driveToken=resp.access_token;
+      setSyncStatus(true,'Connecté à Google Drive');
+      findOrCreateFile();
+    }
+  });
+  client.requestAccessToken();
+}
+
+async function findOrCreateFile(){
+  const r=await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${FILE_NAME}' and trashed=false&fields=files(id,name)`,{headers:{Authorization:'Bearer '+driveToken}});
+  const d=await r.json();
+  if(d.files&&d.files.length>0){
+    driveFileId=d.files[0].id;
+    setSyncStatus(true,'Connecté — fichier trouvé sur Drive');
+  } else {
+    setSyncStatus(true,'Connecté — fichier créé à la première sauvegarde');
+  }
+}
+
+async function saveToDrive(){
+  if(!driveToken){alert('Connectez-vous d\'abord à Google Drive.');return;}
+  const blob=new Blob([JSON.stringify(profiles,null,2)],{type:'application/json'});
+  let r;
+  if(driveFileId){
+    r=await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`,{method:'PATCH',headers:{Authorization:'Bearer '+driveToken,'Content-Type':'application/json'},body:blob});
+  } else {
+    const meta=new Blob([JSON.stringify({name:FILE_NAME,mimeType:'application/json'})],{type:'application/json'});
+    const form=new FormData();form.append('metadata',meta);form.append('file',blob);
+    r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+driveToken},body:form});
+    const d=await r.json();driveFileId=d.id;
+  }
+  if(r.ok){
+    const t=new Date().toLocaleTimeString('fr-FR');
+    setSyncStatus(true,'Connecté à Google Drive');
+    document.getElementById('lastSync').textContent='Dernière sauvegarde : '+t;
+    localStorage.setItem('wyldde_crm',JSON.stringify(profiles));
+  } else {
+    alert('Erreur lors de la sauvegarde Drive.');
+  }
+}
+
+async function loadFromDrive(){
+  if(!driveToken){alert('Connectez-vous d\'abord à Google Drive.');return;}
+  if(!driveFileId){alert('Aucun fichier trouvé sur Drive. Sauvegardez d\'abord depuis un autre appareil.');return;}
+  const r=await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`,{headers:{Authorization:'Bearer '+driveToken}});
+  if(r.ok){
+    profiles=await r.json();
+    localStorage.setItem('wyldde_crm',JSON.stringify(profiles));
+    render();
+    const t=new Date().toLocaleTimeString('fr-FR');
+    document.getElementById('lastSync').textContent='Chargé depuis Drive : '+t;
+  } else {
+    alert('Erreur lors du chargement depuis Drive.');
+  }
+}
+
+// --- Import Wyldde ---
+function openImport(){document.getElementById('importBg').style.display='flex';}
+function closeImport(){document.getElementById('importBg').style.display='none';}
+function closeImportBg(e){if(e.target.id==='importBg')closeImport();}
+
+function doImport(){
+  const raw=document.getElementById('importJson').value.trim();
+  if(!raw){alert('Colle d\'abord le JSON Wyldde.');return;}
+  let data;
+  try{data=JSON.parse(raw);}catch(e){alert('JSON invalide. Vérifie que tu as bien copié toute la réponse depuis l\'onglet Response.');return;}
+  const items=Array.isArray(data)?data:(data.data||data.conversations||data.crushes||data.results||[]);
+  if(!items.length){alert('Aucun profil trouvé dans ce JSON.');return;}
+  let added=0, skipped=0;
+  items.forEach(item=>{
+    const user=item.user||item;
+    const pseudo=user.nickname||user.pseudo||user.username;
+    if(!pseudo){skipped++;return;}
+    if(profiles.find(p=>p.pseudo===pseudo)){skipped++;return;}
+    const geo=(user.geo_code3||user.postal_address||'').toString();
+    const dept=geo.length>=2?geo.slice(0,2):'';
+    const ville=(user.postal_address||'').replace(/,.*$/,'').trim();
+    profiles.push({
+      id:Date.now().toString()+Math.random(),
+      pseudo,
+      type:PROFILE_TYPES[user.profile_type]||'',
+      dept, ville,
+      ages:[user.p0_age,user.p1_age].filter(Boolean).join('/'),
+      cdc:'non', statut:'nouveau', note:0, lcs:false,
+      vousCherchez:'', quiRecherche:'', tags:[],
+      comment:item.last_message&&item.last_message.content?'Dernier msg : "'+item.last_message.content.slice(0,100)+'"':'',
+      date:item.last_message&&item.last_message.datetime?item.last_message.datetime.slice(0,10):'',
+      created:new Date().toISOString(),
+      lien:'https://www.wyldde.com/membres/'+(user.url_id||user.id||pseudo)
+    });
+    added++;
+  });
+  save();render();closeImport();
+  document.getElementById('importJson').value='';
+  alert('Import terminé : '+added+' profil(s) ajouté(s), '+skipped+' ignoré(s) (doublons ou sans pseudo).');
+}
+
+// --- Filtres ---
+function getDepts(){const s=new Set();profiles.forEach(p=>{if(p.dept)s.add(p.dept.trim());});return[...s].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));}
+
+function renderDeptPills(){
+  const depts=getDepts();
+  const c=document.getElementById('deptPills');
+  if(!depts.length){c.innerHTML='<span style="font-size:12px;color:var(--text3)">Aucun département renseigné dans les fiches</span>';return;}
+  c.innerHTML=depts.map(d=>`<span class="dept-pill${activeDepts.has(d)?' active':''}" onclick="toggleDept('${d}')">${d}</span>`).join('');
+}
+
+function toggleDept(d){activeDepts.has(d)?activeDepts.delete(d):activeDepts.add(d);render();}
+function applyQuickFilter(type,value){quickFilter=(quickFilter&&quickFilter.type===type&&quickFilter.value===value)?null:{type,value};render();}
+function clearQuickFilter(){quickFilter=null;render();}
+
+function resetFilters(){
+  quickFilter=null;activeDepts.clear();
+  ['filterStatut','filterCDC','filterVousCherchez','filterQuiRecherche'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('filterLCS').checked=false;
+  document.getElementById('search').value='';
+  render();
+}
+
+// --- Render ---
+function starsHTML(note,id){
+  let s='';for(let i=1;i<=10;i++)s+=`<span class="star${i<=(note||0)?' on':''}" onclick="setNote('${id}',${i})">&#9733;</span>`;
+  return s;
+}
+function setNote(id,n){const p=profiles.find(x=>x.id===id);if(p){p.note=p.note===n?0:n;save();render();}}
+
+function render(){
+  const q=document.getElementById('search').value.toLowerCase();
+  const fs=quickFilter?.type==='statut'?quickFilter.value:document.getElementById('filterStatut').value;
+  const fc=quickFilter?.type==='cdc'?quickFilter.value:document.getElementById('filterCDC').value;
+  const fvc=document.getElementById('filterVousCherchez').value;
+  const fqr=document.getElementById('filterQuiRecherche').value;
+  const flcs=document.getElementById('filterLCS').checked;
+  const so=document.getElementById('sortBy').value;
+
+  let list=profiles.filter(p=>{
+    const mq=!q||p.pseudo.toLowerCase().includes(q)||(p.ville||'').toLowerCase().includes(q)||(p.dept||'').includes(q)||(p.tags||[]).some(t=>t.toLowerCase().includes(q));
+    return mq&&(!fs||p.statut===fs)&&(!fc||p.cdc===fc)&&(!fvc||p.vousCherchez===fvc)&&(!fqr||p.quiRecherche===fqr)&&(!flcs||p.lcs)&&(activeDepts.size===0||activeDepts.has((p.dept||'').trim()));
+  });
+
+  if(so==='note') list.sort((a,b)=>(b.note||0)-(a.note||0));
+  else if(so==='pseudo') list.sort((a,b)=>a.pseudo.localeCompare(b.pseudo));
+  else list.sort((a,b)=>new Date(b.created||0)-new Date(a.created||0));
+
+  const ac=[document.getElementById('filterStatut').value,document.getElementById('filterCDC').value,document.getElementById('filterVousCherchez').value,document.getElementById('filterQuiRecherche').value,document.getElementById('filterLCS').checked?'l':'',quickFilter?'q':'',activeDepts.size>0?'d':''].filter(Boolean).length;
+  document.getElementById('filterCount').textContent=ac?ac+' filtre'+(ac>1?'s':'')+' actif'+(ac>1?'s':''):'';
+
+  const afb=document.getElementById('activeFilterBar');
+  const pills=[];
+  if(quickFilter){const lbl=quickFilter.type==='statut'?STAT_L[quickFilter.value]:CDC_L[quickFilter.value];pills.push(`<button class="filter-pill">${lbl} <span onclick="clearQuickFilter()">✕</span></button>`);}
+  [...activeDepts].forEach(d=>pills.push(`<button class="filter-pill">Dép. ${d} <span onclick="toggleDept('${d}')">✕</span></button>`));
+  afb.innerHTML=pills.length?'Filtres actifs : '+pills.join('')+` <span style="color:var(--text3);margin-left:4px">${list.length} résultat${list.length>1?'s':''}</span>`:'';
+
+  renderDeptPills();
+
+  const grid=document.getElementById('profilesGrid');
+  if(!list.length){
+    grid.innerHTML='<div class="empty-state"><i class="ti ti-user-search" style="font-size:36px;display:block;margin-bottom:10px"></i>Aucun profil pour ces filtres</div>';
+  } else {
+    grid.innerHTML=list.map(p=>{
+      const [bg,fg]=colorFor(p.pseudo);
+      const tags=(p.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('');
+      const comment=p.comment?`<div class="card-comment" onclick="editComment('${p.id}')">${p.comment}</div>`:`<div class="card-comment empty" onclick="editComment('${p.id}')">Ajouter un commentaire...</div>`;
+      const loc=[p.dept?'Dép. '+p.dept:null,p.ville].filter(Boolean).join(' · ');
+      return `<div class="profile-card">
+        <div class="card-header">
+          <div class="avatar" style="background:${bg};color:${fg}">${initials(p.pseudo)}</div>
+          <div class="card-meta">
+            <div class="card-name">${p.pseudo}${p.lien?`<a href="${p.lien}" target="_blank"><i class="ti ti-external-link"></i></a>`:''}</div>
+            <div class="card-sub">${[p.type,p.ages,loc].filter(Boolean).join(' · ')}</div>
+            ${p.vousCherchez||p.quiRecherche?`<div class="card-sub" style="margin-top:2px">${[p.vousCherchez?'Cherche : '+p.vousCherchez:'',p.quiRecherche?'Recherchent : '+p.quiRecherche:''].filter(Boolean).join(' · ')}</div>`:''}
+          </div>
+          <div class="badges">
+            <span class="badge ${CDC_C[p.cdc]||'badge-non'}">${CDC_L[p.cdc]||'—'}</span>
+            <span class="statut-badge ${STAT_C[p.statut]||'s-nouveau'}">${STAT_L[p.statut]||'—'}</span>
+            ${p.lcs?'<span class="badge badge-lcs">LCS</span>':''}
+          </div>
+        </div>
+        <div class="note-bar"><div class="stars">${starsHTML(p.note,p.id)}</div><span style="font-size:12px;color:var(--text2);margin-left:4px">${p.note?p.note+'/10':'—'}</span></div>
+        ${tags?`<div class="tags-row">${tags}</div>`:''}
+        ${comment}
+        ${p.date?`<div style="font-size:11px;color:var(--text3);margin-top:4px"><i class="ti ti-clock" style="font-size:12px;vertical-align:-1px"></i> Dernier contact : ${p.date}</div>`:''}
+        <div class="card-footer">
+          <button class="btn" onclick="openModal('${p.id}')"><i class="ti ti-edit"></i> Modifier</button>
+          <button class="btn btn-danger" onclick="deleteProfile('${p.id}')"><i class="ti ti-trash"></i> Supprimer</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  renderStats();
+}
+
+function renderStats(){
+  const all=profiles;
+  const items=[
+    {label:'Profils',value:all.length,type:null},
+    {label:'Cibles absolues',value:all.filter(p=>p.statut==='cible').length,type:'statut',val:'cible'},
+    {label:'En discussion',value:all.filter(p=>p.statut==='discussion').length,type:'statut',val:'discussion'},
+    {label:'Rencontrés',value:all.filter(p=>p.statut==='rencontre').length,type:'statut',val:'rencontre'},
+    {label:'LCS actifs',value:all.filter(p=>p.lcs).length,type:'lcs',val:'lcs'},
+    {label:'CDC partagés',value:all.filter(p=>p.cdc==='partage').length,type:'cdc',val:'partage'},
+  ];
+  document.getElementById('statsBar').innerHTML=items.map(it=>{
+    const isActive=quickFilter&&quickFilter.type===it.type&&quickFilter.value===it.val;
+    const clickable=it.type?`onclick="applyQuickFilter('${it.type}','${it.val}')"`:'' ;
+    return `<div class="stat-card${isActive?' active':''}${!it.type?' no-click':''}" ${clickable}>
+      <div class="s-label">${it.label}</div>
+      <div class="s-value">${it.value}</div>
+      ${it.type?'<div class="s-hint">Filtrer</div>':''}
+    </div>`;
+  }).join('');
+}
+
+// --- Modal profil ---
+function openModal(id){
+  editingId=id||null;
+  document.getElementById('modalTitle').textContent=id?'Modifier le profil':'Nouveau profil';
+  const p=id?profiles.find(x=>x.id===id):null;
+  document.getElementById('f_pseudo').value=p?.pseudo||'';
+  document.getElementById('f_lien').value=p?.lien||'';
+  document.getElementById('f_type').value=p?.type||'';
+  document.getElementById('f_dept').value=p?.dept||'';
+  document.getElementById('f_ville').value=p?.ville||'';
+  document.getElementById('f_ages').value=p?.ages||'';
+  document.getElementById('f_cdc').value=p?.cdc||'non';
+  document.getElementById('f_statut').value=p?.statut||'nouveau';
+  document.getElementById('f_note').value=p?.note||'';
+  document.getElementById('f_lcs').checked=p?.lcs||false;
+  document.getElementById('f_vousCherchez').value=p?.vousCherchez||'';
+  document.getElementById('f_quiRecherche').value=p?.quiRecherche||'';
+  document.getElementById('f_tags').value=(p?.tags||[]).join(', ');
+  document.getElementById('f_comment').value=p?.comment||'';
+  document.getElementById('f_date').value=p?.date||'';
+  document.getElementById('modalBg').style.display='flex';
+}
+function closeModal(){document.getElementById('modalBg').style.display='none';editingId=null;}
+function closeModalBg(e){if(e.target.id==='modalBg')closeModal();}
+
+function saveProfile(){
+  const pseudo=document.getElementById('f_pseudo').value.trim();
+  if(!pseudo){alert('Le pseudo est obligatoire.');return;}
+  const tags=document.getElementById('f_tags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  const data={
+    pseudo, lien:document.getElementById('f_lien').value.trim(),
+    type:document.getElementById('f_type').value,
+    dept:document.getElementById('f_dept').value.trim(),
+    ville:document.getElementById('f_ville').value.trim(),
+    ages:document.getElementById('f_ages').value.trim(),
+    cdc:document.getElementById('f_cdc').value,
+    statut:document.getElementById('f_statut').value,
+    note:parseInt(document.getElementById('f_note').value)||0,
+    lcs:document.getElementById('f_lcs').checked,
+    vousCherchez:document.getElementById('f_vousCherchez').value,
+    quiRecherche:document.getElementById('f_quiRecherche').value,
+    tags, comment:document.getElementById('f_comment').value.trim(),
+    date:document.getElementById('f_date').value
+  };
+  if(editingId){const i=profiles.findIndex(x=>x.id===editingId);profiles[i]={...profiles[i],...data};}
+  else profiles.push({...data,id:Date.now().toString(),created:new Date().toISOString()});
+  save();closeModal();render();
+}
+
+function deleteProfile(id){
+  if(!confirm('Supprimer ce profil ?'))return;
+  profiles=profiles.filter(x=>x.id!==id);
+  save();render();
+}
+
+function editComment(id){
+  const p=profiles.find(x=>x.id===id);if(!p)return;
+  const c=prompt('Commentaire :',p.comment||'');
+  if(c===null)return;p.comment=c;save();render();
+}
+
+function save(){
+  try{localStorage.setItem('wyldde_crm',JSON.stringify(profiles));}catch(e){}
+}
+function load(){
+  try{const d=localStorage.getItem('wyldde_crm');if(d)profiles=JSON.parse(d);}catch(e){}
+}
+
+load();
+render();
+</script>
+</body>
+</html>

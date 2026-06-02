@@ -396,7 +396,7 @@ function doImport(){
   if(!raw){alert('Colle d\'abord le JSON Wyldde.');return;}
   let data;
   try{data=JSON.parse(raw);}catch(e){alert('JSON invalide. Vérifie que tu as bien copié toute la réponse depuis l\'onglet Response.');return;}
-  const items=Array.isArray(data)?data:(data.data&&data.data.conversations?data.data.conversations:data.data&&Array.isArray(data.data)?data.data:data.conversations||data.crushes||data.results||[]);
+  const items=Array.isArray(data)?data:(data.data&&data.data.conversations?data.data.conversations:data.data&&data.data.talks?data.data.talks:data.data&&Array.isArray(data.data)?data.data:data.conversations||data.talks||data.crushes||data.results||[]);
   if(!items.length){alert('Aucun profil trouvé dans ce JSON.');return;}
   let added=0, skipped=0;
   items.forEach(item=>{
@@ -416,7 +416,7 @@ function doImport(){
       cdc:'non', statut:'nouveau', note:0, lcs:false,
       vousCherchez:'', quiRecherche:'', tags:[],
       comment:item.last_message&&item.last_message.content?'Dernier msg : "'+item.last_message.content.slice(0,100)+'"':'',
-      date:item.last_message&&item.last_message.datetime?item.last_message.datetime.slice(0,10):'',
+      date:item.last_message&&item.last_message.datetime?item.last_message.datetime.slice(0,10):item.date?new Date(item.date*1000).toISOString().slice(0,10):'',
       created:new Date().toISOString(),
       lien:'https://www.wyldde.com/membres/'+(user.url_id||user.id||pseudo)
     });

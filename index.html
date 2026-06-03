@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wyldde CRM</title>
+<title>Lead Management</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.x/dist/tabler-icons.min.css">
 <style>
 :root {
@@ -11,7 +11,6 @@
   --text: #1a1a1a; --text2: #666660; --text3: #999993;
   --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.22);
   --radius: 8px; --radius-lg: 12px;
-  --amber: #EF9F27; --green: #1D9E75; --purple: #534AB7; --red: #A32D2D;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -26,17 +25,13 @@ input, select, textarea, button { font-family: inherit; font-size: 14px; color: 
 input:focus, select:focus, textarea:focus { border-color: var(--text3); }
 textarea { resize: vertical; }
 
-.header { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 0 1.5rem; display: flex; align-items: center; gap: 12px; height: 52px; position: sticky; top: 0; z-index: 10; }
-.header h1 { font-size: 16px; font-weight: 600; color: var(--text); }
-.header-sub { font-size: 12px; color: var(--text3); }
+.header { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 0 1.5rem; display: flex; align-items: center; gap: 12px; height: 52px; position: sticky; top: 0; z-index: 10; flex-wrap: wrap; }
 .header-actions { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
 
 .container { max-width: 1200px; margin: 0 auto; padding: 1rem 1rem 3rem; }
-
 .sync-bar { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text2); margin-bottom: 12px; padding: 8px 12px; background: var(--bg); border-radius: var(--radius); border: 0.5px solid var(--border); flex-wrap: wrap; }
 .sync-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #EF9F27; }
 .sync-dot.ok { background: #1D9E75; }
-.sync-actions { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
 
 .btn { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 500; padding: 7px 13px; border-radius: var(--radius); cursor: pointer; border: 0.5px solid var(--border2); background: transparent; color: var(--text2); transition: background 0.12s; white-space: nowrap; }
 .btn:hover { background: var(--bg2); }
@@ -70,12 +65,10 @@ details[open] summary::after { transform: rotate(90deg); }
 .dept-pill { font-size: 12px; padding: 4px 12px; border-radius: 999px; border: 0.5px solid var(--border2); background: var(--bg); color: var(--text2); cursor: pointer; transition: all 0.1s; }
 .dept-pill:hover { border-color: var(--text); color: var(--text); }
 .dept-pill.active { background: var(--text); color: var(--bg); border-color: var(--text); }
-
 .section-label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; margin: 12px 0 5px; }
 
 .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 1rem; }
 .toolbar input { flex: 1; min-width: 200px; }
-
 .active-filter-bar { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; font-size: 12px; color: var(--text2); flex-wrap: wrap; }
 .filter-pill { display: inline-flex; align-items: center; gap: 4px; background: var(--text); color: var(--bg); border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 500; cursor: pointer; border: none; }
 
@@ -108,14 +101,16 @@ details[open] summary::after { transform: rotate(90deg); }
 .star { font-size: 15px; cursor: pointer; color: var(--border2); transition: color 0.1s; line-height: 1; }
 .star.on { color: #EF9F27; }
 .tags-row { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
-.tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--bg2); color: var(--text2); border: 0.5px solid var(--border); }
+.tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--bg2); color: var(--text2); border: 0.5px solid var(--border); cursor: pointer; }
+.tag:hover { background: var(--bg3); }
 .card-comment { font-size: 12px; color: var(--text2); background: var(--bg2); border-radius: var(--radius); padding: 6px 10px; margin: 6px 0; line-height: 1.5; font-style: italic; cursor: pointer; }
 .card-comment.empty { color: var(--text3); }
 .card-footer { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
 .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text2); font-size: 14px; grid-column: 1/-1; }
 
+/* Modal */
 .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
-.modal { background: var(--bg); border-radius: var(--radius-lg); padding: 1.5rem; width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; border: 0.5px solid var(--border2); }
+.modal { background: var(--bg); border-radius: var(--radius-lg); padding: 1.5rem; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; border: 0.5px solid var(--border2); }
 .modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 1rem; }
 .field { margin-bottom: 12px; }
 .field label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; }
@@ -123,23 +118,37 @@ details[open] summary::after { transform: rotate(90deg); }
 .field textarea { height: 72px; }
 .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1rem; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; padding-top: 18px; }
 
+/* Photo upload */
+.photo-drop { border: 2px dashed var(--border2); border-radius: var(--radius); padding: 16px; text-align: center; cursor: pointer; font-size: 12px; color: var(--text3); transition: border-color 0.15s; margin-bottom: 12px; }
+.photo-drop:hover { border-color: var(--text2); }
+.photo-drop img { max-width: 100%; max-height: 150px; border-radius: var(--radius); margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto; }
+
+/* Tags picker */
+.tags-picker { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.tag-option { font-size: 12px; padding: 4px 12px; border-radius: 999px; border: 0.5px solid var(--border2); background: var(--bg); color: var(--text2); cursor: pointer; transition: all 0.1s; }
+.tag-option:hover { border-color: var(--text); color: var(--text); }
+.tag-option.selected { background: var(--text); color: var(--bg); border-color: var(--text); }
+.tag-input-row { display: flex; gap: 6px; margin-bottom: 6px; }
+.tag-input-row input { flex: 1; }
+
+/* Import steps */
 .import-steps { font-size: 12px; color: var(--text2); line-height: 2.2; margin-bottom: 10px; background: var(--bg2); padding: 10px 14px; border-radius: var(--radius); }
 .import-steps b { color: var(--text); }
+.import-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+.import-tab { padding: 6px 14px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: transparent; color: var(--text2); cursor: pointer; font-size: 13px; font-weight: 500; }
+.import-tab.active { background: var(--text); color: var(--bg); border-color: var(--text); }
 </style>
 </head>
 <body>
 
 <div class="header">
-  <div>
-    <div class="header h1" style="font-size:16px;font-weight:600">Wyldde CRM</div>
-  </div>
+  <div style="font-size:16px;font-weight:600">Lead Management</div>
   <div class="header-actions">
     <button class="btn btn-drive" id="btnDrive" onclick="driveAction()"><i class="ti ti-brand-google-drive"></i> <span id="btnDriveLabel">Connecter Drive</span></button>
     <button class="btn" id="btnSave" onclick="saveToDrive()" style="display:none"><i class="ti ti-cloud-upload"></i> Sauvegarder</button>
     <button class="btn" id="btnLoad" onclick="loadFromDrive()" style="display:none"><i class="ti ti-cloud-download"></i> Charger</button>
-    <button class="btn btn-wyldde" onclick="openImport()"><i class="ti ti-download"></i> Importer Wyldde</button>
+    <button class="btn btn-wyldde" onclick="openImport()"><i class="ti ti-download"></i> Importer</button>
     <button class="btn btn-primary" onclick="openModal()"><i class="ti ti-plus"></i> Ajouter</button>
   </div>
 </div>
@@ -150,9 +159,7 @@ details[open] summary::after { transform: rotate(90deg); }
     <span id="syncStatus">Non connecté à Google Drive</span>
     <span style="margin-left:auto;font-size:11px;color:var(--text3)" id="lastSync"></span>
   </div>
-
   <div class="stats" id="statsBar"></div>
-
   <details class="filter-section">
     <summary>Filtres <span id="filterCount" style="font-size:11px;color:var(--text3);font-weight:400;margin-left:6px"></span></summary>
     <div class="filter-grid">
@@ -173,17 +180,8 @@ details[open] summary::after { transform: rotate(90deg); }
         </select>
       </div>
       <div>
-        <div class="section-label">Vous cherchez</div>
-        <select id="filterVousCherchez" onchange="render()">
-          <option value="">Tous</option>
-          <option>Couples hétéros</option><option>Couples F Bi</option><option>Couples H Bi</option><option>Couples Bi</option>
-          <option>Femmes hétéros</option><option>Femmes Bi</option><option>Lesbiennes</option>
-          <option>Hommes hétéros</option><option>Hommes Bi</option><option>Gays</option><option>Travestis</option><option>Transgenres</option>
-        </select>
-      </div>
-      <div>
-        <div class="section-label">Qui recherchent</div>
-        <select id="filterQuiRecherche" onchange="render()">
+        <div class="section-label">Type de profil</div>
+        <select id="filterType" onchange="render()">
           <option value="">Tous</option>
           <option>Couples hétéros</option><option>Couples F Bi</option><option>Couples H Bi</option><option>Couples Bi</option>
           <option>Femmes hétéros</option><option>Femmes Bi</option><option>Lesbiennes</option>
@@ -193,6 +191,8 @@ details[open] summary::after { transform: rotate(90deg); }
     </div>
     <div class="section-label">Département(s)</div>
     <div class="dept-pills" id="deptPills"></div>
+    <div class="section-label">Tags</div>
+    <div class="dept-pills" id="tagFilterPills"></div>
     <div class="filter-row">
       <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="filterLCS" onchange="render()"> LCS uniquement</label>
       <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
@@ -205,11 +205,9 @@ details[open] summary::after { transform: rotate(90deg); }
       </div>
     </div>
   </details>
-
   <div class="toolbar">
     <input type="text" id="search" placeholder="Rechercher pseudo, ville, département, tag..." oninput="render()">
   </div>
-
   <div id="activeFilterBar" class="active-filter-bar"></div>
   <div class="profiles" id="profilesGrid"></div>
 </div>
@@ -218,9 +216,22 @@ details[open] summary::after { transform: rotate(90deg); }
 <div class="modal-bg" id="modalBg" style="display:none" onclick="closeModalBg(event)">
   <div class="modal">
     <h3 id="modalTitle">Nouveau profil</h3>
+
+    <!-- Photo -->
+    <div class="field">
+      <label>Photo (coller ou glisser-déposer)</label>
+      <div class="photo-drop" id="photoDrop" onclick="document.getElementById('photoInput').click()" ondragover="event.preventDefault()" ondrop="handlePhotoDrop(event)">
+        <img id="photoPreview" src="" style="display:none">
+        <span id="photoHint"><i class="ti ti-photo"></i> Cliquer ou coller une image</span>
+      </div>
+      <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="handlePhotoFile(event)">
+    </div>
+
     <div class="form-grid">
       <div class="field"><label>Pseudo *</label><input type="text" id="f_pseudo" placeholder="ex. NaughtyPoppies"></div>
-      <div class="field"><label>Lien profil Wyldde</label><input type="text" id="f_lien" placeholder="https://wyldde.com/..."></div>
+      <div class="field"><label>Lien profil Wyldde</label><input type="text" id="f_lien" placeholder="https://wyylde.com/..."></div>
+      <div class="field"><label>Prénom 1</label><input type="text" id="f_prenom1" placeholder="ex. Sophie"></div>
+      <div class="field"><label>Prénom 2</label><input type="text" id="f_prenom2" placeholder="ex. Marc (si couple)"></div>
       <div class="field"><label>Type de profil</label>
         <select id="f_type">
           <option value="">—</option>
@@ -246,48 +257,38 @@ details[open] summary::after { transform: rotate(90deg); }
         </select>
       </div>
       <div class="field"><label>Note /10</label><input type="number" id="f_note" min="0" max="10" step="1" placeholder="7"></div>
-      <div class="field"><label class="checkbox-row"><input type="checkbox" id="f_lcs"> LCS (libre cette semaine)</label></div>
+      <div class="field" style="padding-top:18px"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="f_lcs"> LCS (libre cette semaine)</label></div>
     </div>
-    <div class="section-label">Recherches</div>
-    <div class="form-grid">
-      <div class="field"><label>Vous cherchez</label>
-        <select id="f_vousCherchez">
-          <option value="">—</option>
-          <option>Couples hétéros</option><option>Couples F Bi</option><option>Couples H Bi</option><option>Couples Bi</option>
-          <option>Femmes hétéros</option><option>Femmes Bi</option><option>Lesbiennes</option>
-          <option>Hommes hétéros</option><option>Hommes Bi</option><option>Gays</option><option>Travestis</option><option>Transgenres</option>
-        </select>
+
+    <div class="field">
+      <label>Tags</label>
+      <div class="tag-input-row">
+        <input type="text" id="tagInput" placeholder="Nouveau tag..." onkeydown="if(event.key==='Enter'){addTag();event.preventDefault()}">
+        <button class="btn" onclick="addTag()"><i class="ti ti-plus"></i></button>
       </div>
-      <div class="field"><label>Qui recherchent</label>
-        <select id="f_quiRecherche">
-          <option value="">—</option>
-          <option>Couples hétéros</option><option>Couples F Bi</option><option>Couples H Bi</option><option>Couples Bi</option>
-          <option>Femmes hétéros</option><option>Femmes Bi</option><option>Lesbiennes</option>
-          <option>Hommes hétéros</option><option>Hommes Bi</option><option>Gays</option><option>Travestis</option><option>Transgenres</option>
-        </select>
-      </div>
+      <div class="tags-picker" id="tagsPicker"></div>
     </div>
-    <div class="field"><label>Tags perso (séparés par des virgules)</label><input type="text" id="f_tags" placeholder="chic, poils, vulgaire, discrets, naturistes..."></div>
-    <div class="field"><label>Commentaire libre</label><textarea id="f_comment" placeholder="Impressions, contexte de la rencontre, détails..."></textarea></div>
+
+    <div class="field"><label>Commentaire libre</label><textarea id="f_comment" placeholder="Impressions, contexte, détails..."></textarea></div>
     <div class="field"><label>Date dernier contact</label><input type="date" id="f_date"></div>
     <div class="modal-footer">
+      <button class="btn btn-danger" id="btnDeleteProfile" onclick="deleteCurrentProfile()" style="display:none;margin-right:auto"><i class="ti ti-trash"></i> Supprimer</button>
       <button class="btn" onclick="closeModal()">Annuler</button>
       <button class="btn btn-primary" onclick="saveProfile()">Enregistrer</button>
     </div>
   </div>
 </div>
 
-<!-- Modal import Wyldde -->
+<!-- Modal import -->
 <div class="modal-bg" id="importBg" style="display:none" onclick="closeImportBg(event)">
   <div class="modal" style="max-width:580px">
     <h3>Importer depuis Wyldde</h3>
-    <div class="import-steps">
-      <b>1.</b> Va sur Wyldde, connecte-toi et ouvre les DevTools (F12) → onglet <b>Network</b>.<br>
-      <b>2.</b> Navigue vers tes <b>coups de cœur</b> ou ta <b>messagerie</b>.<br>
-      <b>3.</b> Dans la liste, clique sur la ligne <b>crush?version=...</b> ou <b>conversations?nocache=...</b><br>
-      <b>4.</b> Onglet <b>Response</b> → sélectionne tout (Ctrl+A) → copie (Ctrl+C).<br>
-      <b>5.</b> Colle ci-dessous et clique <b>Importer</b>. Les doublons sont ignorés automatiquement.
+    <div class="import-tabs">
+      <button class="import-tab active" id="tabConv" onclick="switchTab('conv')">Messages / Chat</button>
+      <button class="import-tab" id="tabCDCRecu" onclick="switchTab('cdcrecu')">CDC Reçus</button>
+      <button class="import-tab" id="tabCDCEnvoye" onclick="switchTab('cdcenvoye')">CDC Envoyés</button>
     </div>
+    <div id="importInstructions" class="import-steps"></div>
     <div class="field"><textarea id="importJson" style="height:130px;font-family:monospace;font-size:11px" placeholder="Colle le JSON Wyldde ici..."></textarea></div>
     <div class="modal-footer">
       <button class="btn" onclick="closeImport()">Annuler</button>
@@ -302,8 +303,10 @@ const CLIENT_ID = '479015786418-c3ujd7cihmfk08nl0gkd1uvn69299baq.apps.googleuser
 const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 const FILE_NAME = 'wyldde_crm.json';
 
-let profiles = [], editingId = null, quickFilter = null, activeDepts = new Set();
+let profiles = [], editingId = null, quickFilter = null, activeDepts = new Set(), activeTagFilters = new Set();
 let driveToken = null, driveFileId = null;
+let currentPhoto = null;
+let importMode = 'conv';
 
 const COLORS = ['#E1F5EE|#0F6E56','#E6F1FB|#185FA5','#EEEDFE|#534AB7','#FAEEDA|#854F0B','#FBEAF0|#993556','#EAF3DE|#3B6D11'];
 function colorFor(p){let h=0;for(let c of p)h=(h*31+c.charCodeAt(0))%COLORS.length;return COLORS[h].split('|');}
@@ -313,23 +316,37 @@ const CDC_L={non:'Sans CDC',recu:'CDC reçu',envoye:'CDC envoyé',partage:'CDC p
 const CDC_C={non:'badge-non',recu:'badge-recu',envoye:'badge-envoye',partage:'badge-partage'};
 const STAT_L={nouveau:'Nouveau',cible:'Cible absolue',discussion:'En discussion',rencontre:'Rencontré',bof:'Déjà vu, bof',virer:'On vire'};
 const STAT_C={nouveau:'s-nouveau',cible:'s-cible',discussion:'s-discussion',rencontre:'s-rencontre',bof:'s-bof',virer:'s-virer'};
-const PROFILE_TYPES={1:'Couples hétéros',2:'Couples F Bi',3:'Couples H Bi',4:'Couples Bi',5:'Femmes hétéros',6:'Femmes Bi',7:'Lesbiennes',8:'Hommes hétéros',9:'Hommes Bi',10:'Gays',11:'Travestis',12:'Transgenres'};
+
+// Mapping corrigé des types Wyldde
+const PROFILE_TYPES={
+  1:'Couples hétéros',2:'Couples F Bi',3:'Couples H Bi',4:'Couples Bi',
+  5:'Femmes hétéros',6:'Femmes Bi',7:'Lesbiennes',
+  8:'Hommes hétéros',9:'Hommes Bi',10:'Gays',11:'Travestis',12:'Transgenres',
+  // types femmes seules
+  13:'Femmes Bi',14:'Femmes hétéros'
+};
+
+// Tags globaux
+function getAllTags(){
+  const s=new Set();
+  profiles.forEach(p=>(p.tags||[]).forEach(t=>s.add(t)));
+  return [...s].sort();
+}
 
 // --- Drive ---
-function setSyncStatus(ok, msg){
+function setSyncStatus(ok,msg){
   document.getElementById('syncDot').className='sync-dot'+(ok?' ok':'');
   document.getElementById('syncStatus').textContent=msg;
   document.getElementById('btnDriveLabel').textContent=ok?'Déconnecter':'Connecter Drive';
   document.getElementById('btnSave').style.display=ok?'':'none';
   document.getElementById('btnLoad').style.display=ok?'':'none';
 }
-
 function driveAction(){
   if(driveToken){driveToken=null;driveFileId=null;setSyncStatus(false,'Non connecté à Google Drive');return;}
   const client=google.accounts.oauth2.initTokenClient({
-    client_id:CLIENT_ID, scope:SCOPES,
+    client_id:CLIENT_ID,scope:SCOPES,
     callback:(resp)=>{
-      if(resp.error){setSyncStatus(false,'Erreur de connexion : '+resp.error);return;}
+      if(resp.error){setSyncStatus(false,'Erreur : '+resp.error);return;}
       driveToken=resp.access_token;
       setSyncStatus(true,'Connecté à Google Drive');
       findOrCreateFile();
@@ -337,18 +354,12 @@ function driveAction(){
   });
   client.requestAccessToken();
 }
-
 async function findOrCreateFile(){
   const r=await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${FILE_NAME}' and trashed=false&fields=files(id,name)`,{headers:{Authorization:'Bearer '+driveToken}});
   const d=await r.json();
-  if(d.files&&d.files.length>0){
-    driveFileId=d.files[0].id;
-    setSyncStatus(true,'Connecté — fichier trouvé sur Drive');
-  } else {
-    setSyncStatus(true,'Connecté — fichier créé à la première sauvegarde');
-  }
+  if(d.files&&d.files.length>0){driveFileId=d.files[0].id;setSyncStatus(true,'Connecté — fichier trouvé sur Drive');}
+  else setSyncStatus(true,'Connecté — fichier créé à la première sauvegarde');
 }
-
 async function saveToDrive(){
   if(!driveToken){alert('Connectez-vous d\'abord à Google Drive.');return;}
   const blob=new Blob([JSON.stringify(profiles,null,2)],{type:'application/json'});
@@ -362,88 +373,210 @@ async function saveToDrive(){
     const d=await r.json();driveFileId=d.id;
   }
   if(r.ok){
-    const t=new Date().toLocaleTimeString('fr-FR');
-    setSyncStatus(true,'Connecté à Google Drive');
-    document.getElementById('lastSync').textContent='Dernière sauvegarde : '+t;
     localStorage.setItem('wyldde_crm',JSON.stringify(profiles));
-  } else {
-    alert('Erreur lors de la sauvegarde Drive.');
-  }
+    document.getElementById('lastSync').textContent='Sauvegardé : '+new Date().toLocaleTimeString('fr-FR');
+  } else alert('Erreur sauvegarde Drive.');
 }
-
 async function loadFromDrive(){
-  if(!driveToken){alert('Connectez-vous d\'abord à Google Drive.');return;}
-  if(!driveFileId){alert('Aucun fichier trouvé sur Drive. Sauvegardez d\'abord depuis un autre appareil.');return;}
+  if(!driveToken){alert('Connectez-vous d\'abord.');return;}
+  if(!driveFileId){alert('Aucun fichier sur Drive.');return;}
   const r=await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`,{headers:{Authorization:'Bearer '+driveToken}});
   if(r.ok){
     profiles=await r.json();
     localStorage.setItem('wyldde_crm',JSON.stringify(profiles));
     render();
-    const t=new Date().toLocaleTimeString('fr-FR');
-    document.getElementById('lastSync').textContent='Chargé depuis Drive : '+t;
-  } else {
-    alert('Erreur lors du chargement depuis Drive.');
-  }
+    document.getElementById('lastSync').textContent='Chargé : '+new Date().toLocaleTimeString('fr-FR');
+  } else alert('Erreur chargement Drive.');
 }
 
-// --- Import Wyldde ---
-function openImport(){document.getElementById('importBg').style.display='flex';}
+// --- Photo ---
+function handlePhotoFile(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{currentPhoto=ev.target.result;showPhotoPreview(currentPhoto);};
+  reader.readAsDataURL(file);
+}
+function handlePhotoDrop(e){
+  e.preventDefault();
+  const file=e.dataTransfer.files[0];if(!file||!file.type.startsWith('image/'))return;
+  const reader=new FileReader();
+  reader.onload=ev=>{currentPhoto=ev.target.result;showPhotoPreview(currentPhoto);};
+  reader.readAsDataURL(file);
+}
+function showPhotoPreview(src){
+  const img=document.getElementById('photoPreview');
+  const hint=document.getElementById('photoHint');
+  img.src=src;img.style.display='block';hint.style.display='none';
+}
+document.addEventListener('paste',e=>{
+  if(!document.getElementById('modalBg').style.display||document.getElementById('modalBg').style.display==='none')return;
+  const items=e.clipboardData.items;
+  for(let item of items){
+    if(item.type.startsWith('image/')){
+      const file=item.getAsFile();
+      const reader=new FileReader();
+      reader.onload=ev=>{currentPhoto=ev.target.result;showPhotoPreview(currentPhoto);};
+      reader.readAsDataURL(file);
+      break;
+    }
+  }
+});
+
+// --- Tags ---
+function addTag(){
+  const input=document.getElementById('tagInput');
+  const val=input.value.trim();
+  if(!val)return;
+  input.value='';
+  // Add to global tags if not exists, then select it
+  renderTagsPicker(val);
+}
+function renderTagsPicker(newTag){
+  const allTags=getAllTags();
+  if(newTag&&!allTags.includes(newTag))allTags.push(newTag);
+  allTags.sort();
+  const selectedTags=getSelectedTags();
+  if(newTag&&!selectedTags.includes(newTag))selectedTags.push(newTag);
+  const picker=document.getElementById('tagsPicker');
+  picker.innerHTML=allTags.map(t=>`<span class="tag-option${selectedTags.includes(t)?' selected':''}" onclick="toggleTagOption('${t}')">${t}</span>`).join('');
+}
+function getSelectedTags(){
+  return [...document.querySelectorAll('#tagsPicker .tag-option.selected')].map(el=>el.textContent);
+}
+function toggleTagOption(t){
+  const els=document.querySelectorAll('#tagsPicker .tag-option');
+  els.forEach(el=>{if(el.textContent===t)el.classList.toggle('selected');});
+}
+
+// --- Import ---
+const IMPORT_INSTRUCTIONS={
+  conv:`<b>1.</b> Va sur Wyldde → ouvre les DevTools (F12) → onglet <b>Network</b>.<br><b>2.</b> Navigue vers tes <b>messages</b> ou ton <b>chat</b>.<br><b>3.</b> Clique sur <b>conversations?nocache=...</b> ou <b>chat?nocache=...</b> ou <b>talks?nocache=...</b><br><b>4.</b> Onglet <b>Response</b> → Ctrl+A → Ctrl+C → colle ci-dessous.`,
+  cdcrecu:`<b>1.</b> Va sur Wyldde → DevTools (F12) → onglet <b>Network</b>.<br><b>2.</b> Navigue vers tes <b>coups de cœur reçus</b>.<br><b>3.</b> Clique sur <b>crush?version=...</b><br><b>4.</b> Onglet <b>Response</b> → Ctrl+A → Ctrl+C → colle ci-dessous.<br><b>ℹ️</b> Les profils seront marqués CDC <b>Reçu</b>. Si déjà présent en Envoyé → devient <b>Partagé</b>.`,
+  cdcenvoye:`<b>1.</b> Va sur Wyldde → DevTools (F12) → onglet <b>Network</b>.<br><b>2.</b> Navigue vers tes <b>coups de cœur envoyés</b>.<br><b>3.</b> Clique sur <b>sent?version=...</b><br><b>4.</b> Onglet <b>Response</b> → Ctrl+A → Ctrl+C → colle ci-dessous.<br><b>ℹ️</b> Les profils seront marqués CDC <b>Envoyé</b>. Si déjà présent en Reçu → devient <b>Partagé</b>.`
+};
+function switchTab(tab){
+  importMode=tab;
+  ['conv','cdcrecu','cdcenvoye'].forEach(t=>{
+    document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('active',t===tab);
+  });
+  document.getElementById('importInstructions').innerHTML=IMPORT_INSTRUCTIONS[tab];
+}
+function openImport(){
+  document.getElementById('importBg').style.display='flex';
+  switchTab('conv');
+  document.getElementById('importJson').value='';
+}
 function closeImport(){document.getElementById('importBg').style.display='none';}
 function closeImportBg(e){if(e.target.id==='importBg')closeImport();}
 
 function doImport(){
   const raw=document.getElementById('importJson').value.trim();
-  if(!raw){alert('Colle d\'abord le JSON Wyldde.');return;}
+  if(!raw){alert('Colle d\'abord le JSON.');return;}
   let data;
-  try{data=JSON.parse(raw);}catch(e){alert('JSON invalide. Vérifie que tu as bien copié toute la réponse depuis l\'onglet Response.');return;}
-  const items=Array.isArray(data)?data:(data.data&&data.data.conversations?data.data.conversations:data.data&&data.data.talks?data.data.talks:data.data&&Array.isArray(data.data)?data.data:data.conversations||data.talks||data.crushes||data.results||[]);
-  if(!items.length){alert('Aucun profil trouvé dans ce JSON.');return;}
-  let added=0, skipped=0;
+  try{data=JSON.parse(raw);}catch(e){alert('JSON invalide.');return;}
+
+  // Parse items
+  let items=[];
+  if(Array.isArray(data)) items=data;
+  else if(data.data&&data.data.conversations) items=data.data.conversations;
+  else if(data.data&&data.data.talks) items=data.data.talks;
+  else if(data.data&&Array.isArray(data.data)) items=data.data;
+  else if(data.conversations) items=data.conversations;
+  else if(data.talks) items=data.talks;
+  else if(data.crushes) items=data.crushes;
+  else if(data.results) items=data.results;
+
+  if(!items.length){alert('Aucun profil trouvé.');return;}
+
+  let added=0,updated=0,skipped=0;
+
   items.forEach(item=>{
     const user=item.user||item;
     const pseudo=user.nickname||user.pseudo||user.username;
+    const wylddeId=(user.id||user.url_id||'').toString();
     if(!pseudo){skipped++;return;}
-    if(profiles.find(p=>p.pseudo===pseudo)){skipped++;return;}
+
+    // Find existing by wyldde ID first, then by pseudo
+    let existing=wylddeId?profiles.find(p=>p.wylddeId===wylddeId):null;
+    if(!existing) existing=profiles.find(p=>p.pseudo.toLowerCase()===pseudo.toLowerCase());
+
     const geo=(user.geo_code3||user.postal_address||'').toString();
     const dept=geo.length>=2?geo.slice(0,2):'';
     const ville=(user.postal_address||'').replace(/,.*$/,'').trim();
+    const lastMsg=item.last_message&&item.last_message.content?'Dernier msg : "'+item.last_message.content.slice(0,100)+'"':'';
+    const lastDate=item.last_message&&item.last_message.datetime?item.last_message.datetime.slice(0,10):item.date?new Date(item.date*1000).toISOString().slice(0,10):'';
+
+    // Determine CDC
+    let newCdc='non';
+    if(importMode==='cdcrecu') newCdc='recu';
+    else if(importMode==='cdcenvoye') newCdc='envoye';
+
+    if(existing){
+      // Update CDC if needed
+      if(newCdc!=='non'){
+        if((existing.cdc==='recu'&&newCdc==='envoye')||(existing.cdc==='envoye'&&newCdc==='recu')){
+          existing.cdc='partage';
+          updated++;
+        } else if(existing.cdc==='non'){
+          existing.cdc=newCdc;
+          updated++;
+        } else {
+          skipped++;
+        }
+      } else {
+        skipped++;
+      }
+      // Always update wylddeId if missing
+      if(!existing.wylddeId&&wylddeId) existing.wylddeId=wylddeId;
+      return;
+    }
+
+    // New profile
     profiles.push({
       id:Date.now().toString()+Math.random(),
+      wylddeId,
       pseudo,
       type:PROFILE_TYPES[user.profile_type]||'',
-      dept, ville,
+      dept,ville,
       ages:[user.p0_age,user.p1_age].filter(Boolean).join('/'),
-      cdc:'non', statut:'nouveau', note:0, lcs:false,
-      vousCherchez:'', quiRecherche:'', tags:[],
-      comment:item.last_message&&item.last_message.content?'Dernier msg : "'+item.last_message.content.slice(0,100)+'"':'',
-      date:item.last_message&&item.last_message.datetime?item.last_message.datetime.slice(0,10):item.date?new Date(item.date*1000).toISOString().slice(0,10):'',
+      cdc:newCdc,
+      statut:'nouveau',note:0,lcs:false,
+      tags:[],
+      comment:lastMsg,
+      date:lastDate,
       created:new Date().toISOString(),
-      lien:'https://www.wyldde.com/membres/'+(user.url_id||user.id||pseudo)
+      lien:'https://www.wyylde.com/membres/'+(user.url_id||user.id||pseudo),
+      photo:null
     });
     added++;
   });
+
   save();render();closeImport();
   document.getElementById('importJson').value='';
-  alert('Import terminé : '+added+' profil(s) ajouté(s), '+skipped+' ignoré(s) (doublons ou sans pseudo).');
+  alert(`Import terminé : ${added} ajouté(s), ${updated} mis à jour (CDC), ${skipped} ignoré(s).`);
 }
 
 // --- Filtres ---
 function getDepts(){const s=new Set();profiles.forEach(p=>{if(p.dept)s.add(p.dept.trim());});return[...s].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));}
-
 function renderDeptPills(){
   const depts=getDepts();
   const c=document.getElementById('deptPills');
-  if(!depts.length){c.innerHTML='<span style="font-size:12px;color:var(--text3)">Aucun département renseigné dans les fiches</span>';return;}
+  if(!depts.length){c.innerHTML='<span style="font-size:12px;color:var(--text3)">Aucun département</span>';return;}
   c.innerHTML=depts.map(d=>`<span class="dept-pill${activeDepts.has(d)?' active':''}" onclick="toggleDept('${d}')">${d}</span>`).join('');
 }
-
+function renderTagFilterPills(){
+  const tags=getAllTags();
+  const c=document.getElementById('tagFilterPills');
+  if(!tags.length){c.innerHTML='<span style="font-size:12px;color:var(--text3)">Aucun tag</span>';return;}
+  c.innerHTML=tags.map(t=>`<span class="dept-pill${activeTagFilters.has(t)?' active':''}" onclick="toggleTagFilter('${t}')">${t}</span>`).join('');
+}
 function toggleDept(d){activeDepts.has(d)?activeDepts.delete(d):activeDepts.add(d);render();}
+function toggleTagFilter(t){activeTagFilters.has(t)?activeTagFilters.delete(t):activeTagFilters.add(t);render();}
 function applyQuickFilter(type,value){quickFilter=(quickFilter&&quickFilter.type===type&&quickFilter.value===value)?null:{type,value};render();}
 function clearQuickFilter(){quickFilter=null;render();}
-
 function resetFilters(){
-  quickFilter=null;activeDepts.clear();
-  ['filterStatut','filterCDC','filterVousCherchez','filterQuiRecherche'].forEach(id=>document.getElementById(id).value='');
+  quickFilter=null;activeDepts.clear();activeTagFilters.clear();
+  ['filterStatut','filterCDC','filterType'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('filterLCS').checked=false;
   document.getElementById('search').value='';
   render();
@@ -460,30 +593,37 @@ function render(){
   const q=document.getElementById('search').value.toLowerCase();
   const fs=quickFilter?.type==='statut'?quickFilter.value:document.getElementById('filterStatut').value;
   const fc=quickFilter?.type==='cdc'?quickFilter.value:document.getElementById('filterCDC').value;
-  const fvc=document.getElementById('filterVousCherchez').value;
-  const fqr=document.getElementById('filterQuiRecherche').value;
+  const ft=document.getElementById('filterType').value;
   const flcs=document.getElementById('filterLCS').checked;
   const so=document.getElementById('sortBy').value;
 
   let list=profiles.filter(p=>{
     const mq=!q||p.pseudo.toLowerCase().includes(q)||(p.ville||'').toLowerCase().includes(q)||(p.dept||'').includes(q)||(p.tags||[]).some(t=>t.toLowerCase().includes(q));
-    return mq&&(!fs||p.statut===fs)&&(!fc||p.cdc===fc)&&(!fvc||p.vousCherchez===fvc)&&(!fqr||p.quiRecherche===fqr)&&(!flcs||p.lcs)&&(activeDepts.size===0||activeDepts.has((p.dept||'').trim()));
+    const ms=!fs||p.statut===fs;
+    const mc=!fc||p.cdc===fc;
+    const mt=!ft||p.type===ft;
+    const ml=!flcs||p.lcs;
+    const md=activeDepts.size===0||activeDepts.has((p.dept||'').trim());
+    const mtag=activeTagFilters.size===0||[...activeTagFilters].every(t=>(p.tags||[]).includes(t));
+    return mq&&ms&&mc&&mt&&ml&&md&&mtag;
   });
 
   if(so==='note') list.sort((a,b)=>(b.note||0)-(a.note||0));
   else if(so==='pseudo') list.sort((a,b)=>a.pseudo.localeCompare(b.pseudo));
   else list.sort((a,b)=>new Date(b.created||0)-new Date(a.created||0));
 
-  const ac=[document.getElementById('filterStatut').value,document.getElementById('filterCDC').value,document.getElementById('filterVousCherchez').value,document.getElementById('filterQuiRecherche').value,document.getElementById('filterLCS').checked?'l':'',quickFilter?'q':'',activeDepts.size>0?'d':''].filter(Boolean).length;
+  const ac=[document.getElementById('filterStatut').value,document.getElementById('filterCDC').value,document.getElementById('filterType').value,document.getElementById('filterLCS').checked?'l':'',quickFilter?'q':'',activeDepts.size>0?'d':'',activeTagFilters.size>0?'t':''].filter(Boolean).length;
   document.getElementById('filterCount').textContent=ac?ac+' filtre'+(ac>1?'s':'')+' actif'+(ac>1?'s':''):'';
 
   const afb=document.getElementById('activeFilterBar');
   const pills=[];
   if(quickFilter){const lbl=quickFilter.type==='statut'?STAT_L[quickFilter.value]:CDC_L[quickFilter.value];pills.push(`<button class="filter-pill">${lbl} <span onclick="clearQuickFilter()">✕</span></button>`);}
   [...activeDepts].forEach(d=>pills.push(`<button class="filter-pill">Dép. ${d} <span onclick="toggleDept('${d}')">✕</span></button>`));
+  [...activeTagFilters].forEach(t=>pills.push(`<button class="filter-pill">#${t} <span onclick="toggleTagFilter('${t}')">✕</span></button>`));
   afb.innerHTML=pills.length?'Filtres actifs : '+pills.join('')+` <span style="color:var(--text3);margin-left:4px">${list.length} résultat${list.length>1?'s':''}</span>`:'';
 
   renderDeptPills();
+  renderTagFilterPills();
 
   const grid=document.getElementById('profilesGrid');
   if(!list.length){
@@ -491,16 +631,17 @@ function render(){
   } else {
     grid.innerHTML=list.map(p=>{
       const [bg,fg]=colorFor(p.pseudo);
-      const tags=(p.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('');
-      const comment=p.comment?`<div class="card-comment" onclick="editComment('${p.id}')">${p.comment}</div>`:`<div class="card-comment empty" onclick="editComment('${p.id}')">Ajouter un commentaire...</div>`;
+      const tags=(p.tags||[]).map(t=>`<span class="tag" onclick="toggleTagFilter('${t}')">${t}</span>`).join('');
+      const comment=p.comment?`<div class="card-comment" onclick="openModal('${p.id}')">${p.comment}</div>`:`<div class="card-comment empty" onclick="openModal('${p.id}')">Ajouter un commentaire...</div>`;
       const loc=[p.dept?'Dép. '+p.dept:null,p.ville].filter(Boolean).join(' · ');
+      const prenoms=[p.prenom1,p.prenom2].filter(Boolean).join(' & ');
       return `<div class="profile-card">
         <div class="card-header">
           <div class="avatar" style="background:${bg};color:${fg}">${initials(p.pseudo)}</div>
           <div class="card-meta">
             <div class="card-name">${p.pseudo}${p.lien?`<a href="${p.lien}" target="_blank"><i class="ti ti-external-link"></i></a>`:''}</div>
             <div class="card-sub">${[p.type,p.ages,loc].filter(Boolean).join(' · ')}</div>
-            ${p.vousCherchez||p.quiRecherche?`<div class="card-sub" style="margin-top:2px">${[p.vousCherchez?'Cherche : '+p.vousCherchez:'',p.quiRecherche?'Recherchent : '+p.quiRecherche:''].filter(Boolean).join(' · ')}</div>`:''}
+            ${prenoms?'<div class="card-sub" style="margin-top:2px;font-style:italic">'+prenoms+'</div>':''}
           </div>
           <div class="badges">
             <span class="badge ${CDC_C[p.cdc]||'badge-non'}">${CDC_L[p.cdc]||'—'}</span>
@@ -514,7 +655,6 @@ function render(){
         ${p.date?`<div style="font-size:11px;color:var(--text3);margin-top:4px"><i class="ti ti-clock" style="font-size:12px;vertical-align:-1px"></i> Dernier contact : ${p.date}</div>`:''}
         <div class="card-footer">
           <button class="btn" onclick="openModal('${p.id}')"><i class="ti ti-edit"></i> Modifier</button>
-          <button class="btn btn-danger" onclick="deleteProfile('${p.id}')"><i class="ti ti-trash"></i> Supprimer</button>
         </div>
       </div>`;
     }).join('');
@@ -536,8 +676,7 @@ function renderStats(){
     const isActive=quickFilter&&quickFilter.type===it.type&&quickFilter.value===it.val;
     const clickable=it.type?`onclick="applyQuickFilter('${it.type}','${it.val}')"`:'' ;
     return `<div class="stat-card${isActive?' active':''}${!it.type?' no-click':''}" ${clickable}>
-      <div class="s-label">${it.label}</div>
-      <div class="s-value">${it.value}</div>
+      <div class="s-label">${it.label}</div><div class="s-value">${it.value}</div>
       ${it.type?'<div class="s-hint">Filtrer</div>':''}
     </div>`;
   }).join('');
@@ -547,9 +686,20 @@ function renderStats(){
 function openModal(id){
   editingId=id||null;
   document.getElementById('modalTitle').textContent=id?'Modifier le profil':'Nouveau profil';
+  document.getElementById('btnDeleteProfile').style.display=id?'':'none';
   const p=id?profiles.find(x=>x.id===id):null;
+
+  // Photo
+  currentPhoto=p?.photo||null;
+  const img=document.getElementById('photoPreview');
+  const hint=document.getElementById('photoHint');
+  if(currentPhoto){img.src=currentPhoto;img.style.display='block';hint.style.display='none';}
+  else{img.src='';img.style.display='none';hint.style.display='';}
+
   document.getElementById('f_pseudo').value=p?.pseudo||'';
   document.getElementById('f_lien').value=p?.lien||'';
+  document.getElementById('f_prenom1').value=p?.prenom1||'';
+  document.getElementById('f_prenom2').value=p?.prenom2||'';
   document.getElementById('f_type').value=p?.type||'';
   document.getElementById('f_dept').value=p?.dept||'';
   document.getElementById('f_ville').value=p?.ville||'';
@@ -558,22 +708,35 @@ function openModal(id){
   document.getElementById('f_statut').value=p?.statut||'nouveau';
   document.getElementById('f_note').value=p?.note||'';
   document.getElementById('f_lcs').checked=p?.lcs||false;
-  document.getElementById('f_vousCherchez').value=p?.vousCherchez||'';
-  document.getElementById('f_quiRecherche').value=p?.quiRecherche||'';
-  document.getElementById('f_tags').value=(p?.tags||[]).join(', ');
   document.getElementById('f_comment').value=p?.comment||'';
   document.getElementById('f_date').value=p?.date||'';
+
+  // Tags
+  const selectedTags=p?.tags||[];
+  const allTags=getAllTags();
+  const combined=[...new Set([...allTags,...selectedTags])].sort();
+  document.getElementById('tagsPicker').innerHTML=combined.map(t=>`<span class="tag-option${selectedTags.includes(t)?' selected':''}" onclick="toggleTagOption('${t}')">${t}</span>`).join('');
+
   document.getElementById('modalBg').style.display='flex';
 }
-function closeModal(){document.getElementById('modalBg').style.display='none';editingId=null;}
+function closeModal(){document.getElementById('modalBg').style.display='none';editingId=null;currentPhoto=null;}
 function closeModalBg(e){if(e.target.id==='modalBg')closeModal();}
+
+function deleteCurrentProfile(){
+  if(!editingId)return;
+  if(!confirm('Supprimer ce profil ?'))return;
+  profiles=profiles.filter(x=>x.id!==editingId);
+  save();closeModal();render();
+}
 
 function saveProfile(){
   const pseudo=document.getElementById('f_pseudo').value.trim();
   if(!pseudo){alert('Le pseudo est obligatoire.');return;}
-  const tags=document.getElementById('f_tags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  const tags=getSelectedTags();
   const data={
-    pseudo, lien:document.getElementById('f_lien').value.trim(),
+    pseudo,lien:document.getElementById('f_lien').value.trim(),
+    prenom1:document.getElementById('f_prenom1').value.trim(),
+    prenom2:document.getElementById('f_prenom2').value.trim(),
     type:document.getElementById('f_type').value,
     dept:document.getElementById('f_dept').value.trim(),
     ville:document.getElementById('f_ville').value.trim(),
@@ -582,37 +745,20 @@ function saveProfile(){
     statut:document.getElementById('f_statut').value,
     note:parseInt(document.getElementById('f_note').value)||0,
     lcs:document.getElementById('f_lcs').checked,
-    vousCherchez:document.getElementById('f_vousCherchez').value,
-    quiRecherche:document.getElementById('f_quiRecherche').value,
-    tags, comment:document.getElementById('f_comment').value.trim(),
-    date:document.getElementById('f_date').value
+    tags,
+    comment:document.getElementById('f_comment').value.trim(),
+    date:document.getElementById('f_date').value,
+    photo:currentPhoto
   };
   if(editingId){const i=profiles.findIndex(x=>x.id===editingId);profiles[i]={...profiles[i],...data};}
-  else profiles.push({...data,id:Date.now().toString(),created:new Date().toISOString()});
+  else profiles.push({...data,id:Date.now().toString(),created:new Date().toISOString(),wylddeId:''});
   save();closeModal();render();
 }
 
-function deleteProfile(id){
-  if(!confirm('Supprimer ce profil ?'))return;
-  profiles=profiles.filter(x=>x.id!==id);
-  save();render();
-}
+function save(){try{localStorage.setItem('wyldde_crm',JSON.stringify(profiles));}catch(e){}}
+function load(){try{const d=localStorage.getItem('wyldde_crm');if(d)profiles=JSON.parse(d);}catch(e){}}
 
-function editComment(id){
-  const p=profiles.find(x=>x.id===id);if(!p)return;
-  const c=prompt('Commentaire :',p.comment||'');
-  if(c===null)return;p.comment=c;save();render();
-}
-
-function save(){
-  try{localStorage.setItem('wyldde_crm',JSON.stringify(profiles));}catch(e){}
-}
-function load(){
-  try{const d=localStorage.getItem('wyldde_crm');if(d)profiles=JSON.parse(d);}catch(e){}
-}
-
-load();
-render();
+load();render();
 </script>
 </body>
 </html>

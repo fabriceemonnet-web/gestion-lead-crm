@@ -456,9 +456,9 @@ const IMPORT_INSTRUCTIONS={
 };
 function switchTab(tab){
   importMode=tab;
-  ['conv','cdcrecu','cdcenvoye'].forEach(t=>{
-    document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('active',t===tab);
-  });
+  document.getElementById('tabConv').classList.toggle('active',tab==='conv');
+  document.getElementById('tabCDCRecu').classList.toggle('active',tab==='cdcrecu');
+  document.getElementById('tabCDCEnvoye').classList.toggle('active',tab==='cdcenvoye');
   document.getElementById('importInstructions').innerHTML=IMPORT_INSTRUCTIONS[tab];
 }
 function openImport(){
@@ -492,7 +492,7 @@ function doImport(){
   let added=0,updated=0,skipped=0;
 
   items.forEach(item=>{
-    const user=item.user||item.sender||item;
+    const user=item.user||item.sender||item.receiver||item;
     const pseudo=user.nickname||user.pseudo||user.username;
     const wylddeId=(user.id||user.url_id||'').toString();
     if(!pseudo){skipped++;return;}
@@ -509,8 +509,8 @@ function doImport(){
 
     // Determine CDC
     let newCdc='non';
-    if(importMode==='cdcrecu') newCdc='recu';
-    else if(importMode==='cdcenvoye') newCdc='envoye';
+    if(importMode==='cdcrecu') newCdc=user.crush_mutual?'partage':'recu';
+    else if(importMode==='cdcenvoye') newCdc=user.crush_mutual?'partage':'envoye';
 
     if(existing){
       // Update CDC if needed

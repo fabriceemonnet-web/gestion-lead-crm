@@ -171,33 +171,33 @@ function loadCRM() {
     const d = localStorage.getItem('wyldde_crm');
     if (d) {
       const profiles = JSON.parse(d);
-      profiles.forEach(p => {
-        if (p.wylddeId) crmProfiles[p.wylddeId] = p;
-        // Also index by pseudo
-        crmProfiles['pseudo_' + p.pseudo.toLowerCase()] = p;
-      });
-      // Populate import target select
-      const sel = document.getElementById('importTarget');
-      // Add me node
+      // Add me node first
       graphData.nodes['7823839'] = {
         id: '7823839', pseudo: 'NaughtyPoppies', isMe: true,
         status: 'me', inBase: true, connections: 0
       };
+      const sel = document.getElementById('importTarget');
       profiles.forEach(p => {
-        if (p.wylddeId) {
-          const opt = document.createElement('option');
-          opt.value = p.wylddeId;
-          opt.textContent = p.pseudo;
-          sel.appendChild(opt);
-          // Add to graph nodes
-          graphData.nodes[p.wylddeId] = {
-            id: p.wylddeId, pseudo: p.pseudo,
-            status: p.statut || 'nouveau', inBase: true,
-            ages: p.ages, dept: p.dept, ville: p.ville,
-            type: p.type, connections: 0,
-            lien: p.lien || `https://www.wyylde.com/membres/${p.wylddeId}`
-          };
-        }
+        // Index by wylddeId and pseudo
+        if (p.wylddeId) crmProfiles[p.wylddeId] = p;
+        crmProfiles['pseudo_' + p.pseudo.toLowerCase()] = p;
+
+        // Use wylddeId if available, otherwise use pseudo as key
+        const nodeId = p.wylddeId || ('pseudo_' + p.pseudo.toLowerCase());
+        const displayId = p.wylddeId || p.pseudo;
+
+        const opt = document.createElement('option');
+        opt.value = nodeId;
+        opt.textContent = p.pseudo;
+        sel.appendChild(opt);
+
+        graphData.nodes[nodeId] = {
+          id: nodeId, pseudo: p.pseudo,
+          status: p.statut || 'nouveau', inBase: true,
+          ages: p.ages, dept: p.dept, ville: p.ville,
+          type: p.type, connections: 0,
+          lien: p.lien || (p.wylddeId ? `https://www.wyylde.com/membres/${p.wylddeId}` : '')
+        };
       });
     }
   } catch(e) { console.error(e); }
@@ -205,17 +205,47 @@ function loadCRM() {
 
 function doImport() {
   const raw = document.getElementById('importJson').value.trim();
-  const targetId = document.getElementById('importTarget').value;
+  let targetId = document.getElementById('importTarget').value;
   if (!raw) { alert('Colle d\'abord le JSON.'); return; }
   let data;
   try { data = JSON.parse(raw); } catch(e) { alert('JSON invalide.'); return; }
 
+  // Auto-detect target from resource field
+  const resource = data.resource || '';
+  const profileMatch = resource.match(/\/profile\/(\d+)\/testimonies/);
+  if (profileMatch) {
+    const detectedId = profileMatch[1];
+    // Find matching node
+    if (graphData.nodes[detectedId]) {
+      targetId = detectedId;
+    } else {
+      // Check crmProfiles
+      const crm = crmProfiles[detectedId];
+      if (crm) targetId = detectedId;
+    }
+    document.getElementById('importTarget').value = targetId;
+  } else if (resource === '/testimonies') {
+    // These are NaughtyPoppies own testimonies
+    targetId = '7823839';
+    document.getElementById('importTarget').value = '7823839';
+  }
+
   const testimonies = data.data?.testimonies || data.testimonies || [];
   if (!testimonies.length) { alert('Aucun témoignage trouvé.'); return; }
 
-  // Ensure target node exists
+  // Ensure target node exists and is properly identified
   if (!graphData.nodes[targetId]) {
-    graphData.nodes[targetId] = { id: targetId, pseudo: 'Inconnu', status: 'unknown', inBase: false, connections: 0 };
+    const crm = crmProfiles[targetId];
+    if (crm) {
+      graphData.nodes[targetId] = {
+        id: targetId, pseudo: crm.pseudo,
+        status: crm.statut || 'nouveau', inBase: true,
+        ages: crm.ages, type: crm.type, connections: 0,
+        lien: crm.lien || `https://www.wyylde.com/membres/${targetId}`
+      };
+    } else {
+      graphData.nodes[targetId] = { id: targetId, pseudo: targetId, status: 'unknown', inBase: false, connections: 0 };
+    }
   }
 
   let added = 0;

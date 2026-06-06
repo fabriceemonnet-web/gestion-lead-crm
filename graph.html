@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Graphe de Relations — Lead Management</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+:root {
+  --bg: #ffffff; --bg2: #f5f5f3; --bg3: #eeece8;
+  --text: #1a1a1a; --text2: #666660; --text3: #999993;
+  --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.22);
+  --radius: 8px; --radius-lg: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1c1a; --bg2: #262624; --bg3: #2e2e2b;
+    --text: #f0ede8; --text2: #999993; --text3: #666660;
+    --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.2);
+  }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+.header { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 0 1.5rem; display: flex; align-items: center; gap: 12px; height: 52px; flex-shrink: 0; }
+.header-actions { display: flex; gap: 8px; margin-left: auto; align-items: center; }
+.btn { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 500; padding: 6px 12px; border-radius: var(--radius); cursor: pointer; border: 0.5px solid var(--border2); background: transparent; color: var(--text2); white-space: nowrap; }
+.btn:hover { background: var(--bg2); }
+.btn-primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn-primary:hover { opacity: 0.85; background: var(--text); }
+.btn-purple { background: #534AB7; color: #fff; border-color: #534AB7; }
+.btn-purple:hover { opacity: 0.85; background: #534AB7; }
+.btn-active { background: var(--text); color: var(--bg); }
+
+.toolbar { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 8px 1.5rem; display: flex; align-items: center; gap: 10px; flex-shrink: 0; flex-wrap: wrap; }
+.legend { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text2); }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+
+.graph-container { flex: 1; position: relative; overflow: hidden; }
+svg { width: 100%; height: 100%; }
+
+.node circle { cursor: pointer; stroke-width: 2; transition: r 0.2s; }
+.node circle:hover { stroke-width: 3; }
+.node text { font-size: 11px; fill: var(--text); pointer-events: none; text-anchor: middle; dominant-baseline: middle; font-weight: 500; }
+.node .sublabel { font-size: 10px; fill: var(--text2); }
+
+.link { stroke: var(--border2); stroke-opacity: 0.5; fill: none; }
+.link.highlighted { stroke: #534AB7; stroke-opacity: 0.8; stroke-width: 2; }
+
+.tooltip { position: absolute; background: var(--bg); border: 0.5px solid var(--border2); border-radius: var(--radius-lg); padding: 12px 14px; font-size: 12px; pointer-events: none; opacity: 0; transition: opacity 0.15s; max-width: 240px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); z-index: 100; }
+.tooltip h4 { font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+.tooltip p { color: var(--text2); margin-bottom: 4px; line-height: 1.4; }
+.tooltip .connections { margin-top: 8px; font-weight: 500; color: var(--text); }
+.tooltip-actions { display: flex; gap: 6px; margin-top: 10px; }
+
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 1rem; }
+.modal { background: var(--bg); border-radius: var(--radius-lg); padding: 1.5rem; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; border: 0.5px solid var(--border2); }
+.modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+.modal p { font-size: 13px; color: var(--text2); margin-bottom: 12px; line-height: 1.6; }
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+.field select, .field textarea { width: 100%; font-family: inherit; font-size: 13px; color: var(--text); background: var(--bg); border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 7px 10px; }
+.field textarea { height: 120px; resize: vertical; font-family: monospace; font-size: 11px; }
+.modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1rem; }
+.import-steps { font-size: 12px; color: var(--text2); line-height: 2; background: var(--bg2); padding: 10px 14px; border-radius: var(--radius); margin-bottom: 12px; }
+.import-steps b { color: var(--text); }
+
+.stats-bar { background: var(--bg); border-top: 0.5px solid var(--border); padding: 6px 1.5rem; display: flex; gap: 16px; font-size: 12px; color: var(--text2); flex-shrink: 0; }
+.stats-bar span { color: var(--text); font-weight: 500; }
+
+.empty-state { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text2); gap: 12px; }
+.empty-state h3 { font-size: 18px; font-weight: 500; color: var(--text); }
+.empty-state p { font-size: 14px; max-width: 400px; text-align: center; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="font-size:16px;font-weight:600">Graphe de Relations</div>
+  <a href="https://fabriceemonnet-web.github.io/gestion-lead-crm/" style="font-size:12px;color:var(--text3);text-decoration:none">← Lead Management</a>
+  <div class="header-actions">
+    <button class="btn" id="btnMaBase" onclick="setMode('base')">Ma base uniquement</button>
+    <button class="btn btn-active" id="btnDecouverte" onclick="setMode('all')">Mode découverte</button>
+    <button class="btn btn-purple" onclick="openImport()">+ Importer témoignages</button>
+    <button class="btn" onclick="resetZoom()">Recentrer</button>
+  </div>
+</div>
+
+<div class="toolbar">
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#1D9E75"></div> Dans ma base</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#534AB7"></div> Inconnu (découverte)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#EF9F27"></div> Cible absolue</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#185FA5"></div> En discussion</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#3B6D11"></div> Rencontré</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#A32D2D"></div> On vire</div>
+    <div class="legend-item" style="margin-left:8px;border-left:0.5px solid var(--border2);padding-left:12px">
+      Taille bulle = nombre de connexions
+    </div>
+  </div>
+</div>
+
+<div class="graph-container" id="graphContainer">
+  <div class="empty-state" id="emptyState">
+    <h3>Graphe vide</h3>
+    <p>Importe les témoignages de tes contacts pour construire le réseau. Va sur le profil d'un couple sur Wyldde, clique sur son compteur de témoignages, récupère le JSON dans le Network et importe-le ici.</p>
+    <button class="btn btn-purple" onclick="openImport()">+ Importer témoignages</button>
+  </div>
+  <svg id="graphSvg"></svg>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<div class="stats-bar" id="statsBar">
+  <div>Nœuds : <span id="statNodes">0</span></div>
+  <div>Liens : <span id="statLinks">0</span></div>
+  <div>Dans ma base : <span id="statBase">0</span></div>
+  <div>Inconnus : <span id="statUnknown">0</span></div>
+</div>
+
+<!-- Modal import -->
+<div class="modal-bg" id="importBg" style="display:none" onclick="closeImportBg(event)">
+  <div class="modal">
+    <h3>Importer des témoignages</h3>
+    <div class="import-steps">
+      <b>1.</b> Va sur Wyldde et ouvre le profil d'un de tes contacts.<br>
+      <b>2.</b> Clique sur son compteur de témoignages (ex: "Témoignages (4)").<br>
+      <b>3.</b> Dans DevTools → Network → filtre <b>test</b> → clique sur <b>testimonies?nocache=...</b><br>
+      <b>4.</b> Onglet <b>Response</b> → Ctrl+A → Ctrl+C → colle ci-dessous.<br>
+      <b>5.</b> Sélectionne à qui appartiennent ces témoignages et clique Importer.
+    </div>
+    <div class="field">
+      <label>Ces témoignages appartiennent à quel profil ?</label>
+      <select id="importTarget">
+        <option value="me">NaughtyPoppies (moi)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>JSON des témoignages</label>
+      <textarea id="importJson" placeholder="Colle le JSON ici..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeImport()">Annuler</button>
+      <button class="btn btn-primary" onclick="doImport()">Importer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---- DATA ----
+let graphData = { nodes: {}, links: [] };
+let crmProfiles = {};
+let displayMode = 'all';
+let simulation, svg, g, zoom;
+
+const STATUS_COLORS = {
+  cible: '#EF9F27',
+  discussion: '#185FA5',
+  rencontre: '#3B6D11',
+  bof: '#5F5E5A',
+  virer: '#A32D2D',
+  nouveau: '#1D9E75',
+  unknown: '#534AB7',
+  me: '#E63946'
+};
+
+// Load CRM data from localStorage
+function loadCRM() {
+  try {
+    const d = localStorage.getItem('wyldde_crm');
+    if (d) {
+      const profiles = JSON.parse(d);
+      profiles.forEach(p => {
+        if (p.wylddeId) crmProfiles[p.wylddeId] = p;
+        // Also index by pseudo
+        crmProfiles['pseudo_' + p.pseudo.toLowerCase()] = p;
+      });
+      // Populate import target select
+      const sel = document.getElementById('importTarget');
+      // Add me node
+      graphData.nodes['7823839'] = {
+        id: '7823839', pseudo: 'NaughtyPoppies', isMe: true,
+        status: 'me', inBase: true, connections: 0
+      };
+      profiles.forEach(p => {
+        if (p.wylddeId) {
+          const opt = document.createElement('option');
+          opt.value = p.wylddeId;
+          opt.textContent = p.pseudo;
+          sel.appendChild(opt);
+          // Add to graph nodes
+          graphData.nodes[p.wylddeId] = {
+            id: p.wylddeId, pseudo: p.pseudo,
+            status: p.statut || 'nouveau', inBase: true,
+            ages: p.ages, dept: p.dept, ville: p.ville,
+            type: p.type, connections: 0,
+            lien: p.lien || `https://www.wyylde.com/membres/${p.wylddeId}`
+          };
+        }
+      });
+    }
+  } catch(e) { console.error(e); }
+}
+
+function doImport() {
+  const raw = document.getElementById('importJson').value.trim();
+  const targetId = document.getElementById('importTarget').value;
+  if (!raw) { alert('Colle d\'abord le JSON.'); return; }
+  let data;
+  try { data = JSON.parse(raw); } catch(e) { alert('JSON invalide.'); return; }
+
+  const testimonies = data.data?.testimonies || data.testimonies || [];
+  if (!testimonies.length) { alert('Aucun témoignage trouvé.'); return; }
+
+  // Ensure target node exists
+  if (!graphData.nodes[targetId]) {
+    graphData.nodes[targetId] = { id: targetId, pseudo: 'Inconnu', status: 'unknown', inBase: false, connections: 0 };
+  }
+
+  let added = 0;
+  testimonies.forEach(t => {
+    const nodeId = String(t.id || t.url_id);
+    const pseudo = t.nickname;
+    if (!nodeId || !pseudo) return;
+
+    // Add or update node
+    if (!graphData.nodes[nodeId]) {
+      const crm = crmProfiles[nodeId] || crmProfiles['pseudo_' + pseudo.toLowerCase()];
+      graphData.nodes[nodeId] = {
+        id: nodeId, pseudo,
+        status: crm ? (crm.statut || 'nouveau') : 'unknown',
+        inBase: !!crm,
+        ages: crm ? crm.ages : [t.p0_age, t.p1_age].filter(Boolean).join('/'),
+        type: crm ? crm.type : '',
+        lien: `https://www.wyylde.com/membres/${nodeId}`,
+        connections: 0
+      };
+      added++;
+    }
+
+    // Add link if not already exists
+    const linkKey = [targetId, nodeId].sort().join('-');
+    const exists = graphData.links.find(l => {
+      const k = [String(l.source.id || l.source), String(l.target.id || l.target)].sort().join('-');
+      return k === linkKey;
+    });
+    if (!exists) {
+      graphData.links.push({ source: targetId, target: nodeId });
+    }
+  });
+
+  save();
+  closeImport();
+  document.getElementById('importJson').value = '';
+  renderGraph();
+  alert(`Import terminé : ${added} nouveau(x) profil(s), ${testimonies.length} lien(s) traité(s).`);
+}
+
+function save() {
+  try { localStorage.setItem('wyldde_graph', JSON.stringify(graphData)); } catch(e) {}
+}
+
+function loadGraph() {
+  try {
+    const d = localStorage.getItem('wyldde_graph');
+    if (d) {
+      const saved = JSON.parse(d);
+      // Merge with CRM data
+      Object.keys(saved.nodes).forEach(id => {
+        const crm = crmProfiles[id];
+        if (crm) {
+          saved.nodes[id].inBase = true;
+          saved.nodes[id].status = crm.statut || 'nouveau';
+          saved.nodes[id].ages = crm.ages;
+          saved.nodes[id].type = crm.type;
+        }
+        if (!graphData.nodes[id]) graphData.nodes[id] = saved.nodes[id];
+      });
+      saved.links.forEach(l => {
+        const src = String(l.source.id || l.source);
+        const tgt = String(l.target.id || l.target);
+        const key = [src, tgt].sort().join('-');
+        const exists = graphData.links.find(el => {
+          const k = [String(el.source.id || el.source), String(el.target.id || el.target)].sort().join('-');
+          return k === key;
+        });
+        if (!exists) graphData.links.push({ source: src, target: tgt });
+      });
+    }
+  } catch(e) {}
+}
+
+function setMode(mode) {
+  displayMode = mode;
+  document.getElementById('btnMaBase').classList.toggle('btn-active', mode === 'base');
+  document.getElementById('btnDecouverte').classList.toggle('btn-active', mode === 'all');
+  renderGraph();
+}
+
+function getFilteredData() {
+  let nodes = Object.values(graphData.nodes);
+  let links = graphData.links;
+
+  if (displayMode === 'base') {
+    const baseIds = new Set(nodes.filter(n => n.inBase || n.isMe).map(n => n.id));
+    nodes = nodes.filter(n => n.inBase || n.isMe);
+    links = links.filter(l => {
+      const src = String(l.source.id || l.source);
+      const tgt = String(l.target.id || l.target);
+      return baseIds.has(src) && baseIds.has(tgt);
+    });
+  }
+
+  // Count connections
+  const connCount = {};
+  links.forEach(l => {
+    const src = String(l.source.id || l.source);
+    const tgt = String(l.target.id || l.target);
+    connCount[src] = (connCount[src] || 0) + 1;
+    connCount[tgt] = (connCount[tgt] || 0) + 1;
+  });
+  nodes.forEach(n => { n.connections = connCount[n.id] || 0; });
+
+  return { nodes, links };
+}
+
+function renderGraph() {
+  const { nodes, links } = getFilteredData();
+
+  // Update stats
+  document.getElementById('statNodes').textContent = nodes.length;
+  document.getElementById('statLinks').textContent = links.length;
+  document.getElementById('statBase').textContent = nodes.filter(n => n.inBase || n.isMe).length;
+  document.getElementById('statUnknown').textContent = nodes.filter(n => !n.inBase && !n.isMe).length;
+
+  document.getElementById('emptyState').style.display = links.length === 0 && nodes.length <= 1 ? 'flex' : 'none';
+
+  const container = document.getElementById('graphContainer');
+  const W = container.clientWidth;
+  const H = container.clientHeight;
+
+  d3.select('#graphSvg').selectAll('*').remove();
+  svg = d3.select('#graphSvg');
+
+  zoom = d3.zoom().scaleExtent([0.1, 4]).on('zoom', e => g.attr('transform', e.transform));
+  svg.call(zoom);
+
+  g = svg.append('g');
+
+  // Simulation
+  simulation = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links).id(d => d.id).distance(d => {
+      const srcMe = d.source.isMe || d.target.isMe;
+      return srcMe ? 120 : 80;
+    }).strength(0.8))
+    .force('charge', d3.forceManyBody().strength(-200))
+    .force('center', d3.forceCenter(W / 2, H / 2))
+    .force('collision', d3.forceCollide().radius(d => nodeRadius(d) + 8));
+
+  // Links
+  const link = g.append('g').selectAll('line')
+    .data(links).join('line').attr('class', 'link').attr('stroke-width', 1.5);
+
+  // Nodes
+  const node = g.append('g').selectAll('g')
+    .data(nodes).join('g').attr('class', 'node')
+    .call(d3.drag()
+      .on('start', (e, d) => { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+      .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
+      .on('end', (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; })
+    )
+    .on('mouseover', showTooltip)
+    .on('mousemove', moveTooltip)
+    .on('mouseout', hideTooltip)
+    .on('click', handleClick);
+
+  node.append('circle')
+    .attr('r', nodeRadius)
+    .attr('fill', d => nodeColor(d))
+    .attr('stroke', d => d.isMe ? '#E63946' : (d.inBase ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)'))
+    .attr('stroke-width', d => d.isMe ? 3 : 1.5);
+
+  node.append('text')
+    .attr('dy', d => nodeRadius(d) > 20 ? -4 : 0)
+    .text(d => d.pseudo.length > 14 ? d.pseudo.slice(0, 12) + '…' : d.pseudo)
+    .style('font-size', d => d.isMe ? '12px' : '10px')
+    .style('font-weight', d => d.isMe ? '700' : '500');
+
+  node.filter(d => d.connections > 0 && nodeRadius(d) > 16).append('text')
+    .attr('class', 'sublabel')
+    .attr('dy', d => nodeRadius(d) > 20 ? 10 : 12)
+    .text(d => d.connections + ' lien' + (d.connections > 1 ? 's' : ''));
+
+  simulation.on('tick', () => {
+    link
+      .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+    node.attr('transform', d => `translate(${d.x},${d.y})`);
+  });
+}
+
+function nodeRadius(d) {
+  if (d.isMe) return 28;
+  const base = d.inBase ? 18 : 14;
+  return base + Math.min(d.connections * 2, 12);
+}
+
+function nodeColor(d) {
+  if (d.isMe) return STATUS_COLORS.me;
+  if (!d.inBase) return STATUS_COLORS.unknown;
+  return STATUS_COLORS[d.status] || STATUS_COLORS.nouveau;
+}
+
+function showTooltip(event, d) {
+  const tip = document.getElementById('tooltip');
+  const inBase = d.inBase || d.isMe;
+  const unknown = !inBase;
+
+  let html = `<h4>${d.pseudo}</h4>`;
+  if (d.isMe) html += `<p>C'est toi !</p>`;
+  else {
+    if (d.type) html += `<p>${d.type}</p>`;
+    if (d.ages) html += `<p>${d.ages} ans${d.dept ? ' · Dép. ' + d.dept : ''}</p>`;
+    if (!inBase) html += `<p style="color:#534AB7;font-weight:500">Profil inconnu</p>`;
+    else {
+      const statusLabels = {nouveau:'Nouveau',cible:'Cible absolue',discussion:'En discussion',rencontre:'Rencontré',bof:'Déjà vu, bof',virer:'On vire'};
+      html += `<p>${statusLabels[d.status] || d.status}</p>`;
+    }
+  }
+  html += `<p class="connections">${d.connections} connexion${d.connections > 1 ? 's' : ''} dans le réseau</p>`;
+  html += `<div class="tooltip-actions">`;
+  if (d.lien && !d.isMe) html += `<a href="${d.lien}" target="_blank" class="btn btn-primary" style="font-size:11px;padding:4px 8px;text-decoration:none">Voir profil</a>`;
+  if (unknown && !d.isMe) html += `<button class="btn" style="font-size:11px;padding:4px 8px" onclick="addToCRM('${d.id}','${d.pseudo}')">+ Ajouter au CRM</button>`;
+  html += `</div>`;
+
+  tip.innerHTML = html;
+  tip.style.opacity = '1';
+  moveTooltip(event);
+}
+
+function moveTooltip(event) {
+  const tip = document.getElementById('tooltip');
+  const x = event.offsetX + 15;
+  const y = event.offsetY - 10;
+  tip.style.left = x + 'px';
+  tip.style.top = y + 'px';
+}
+
+function hideTooltip() {
+  document.getElementById('tooltip').style.opacity = '0';
+}
+
+function handleClick(event, d) {
+  // Highlight connected nodes
+  const svg = d3.select('#graphSvg');
+  const connectedIds = new Set([d.id]);
+  graphData.links.forEach(l => {
+    const src = String(l.source.id || l.source);
+    const tgt = String(l.target.id || l.target);
+    if (src === d.id) connectedIds.add(tgt);
+    if (tgt === d.id) connectedIds.add(src);
+  });
+
+  svg.selectAll('.node circle')
+    .attr('opacity', n => connectedIds.has(n.id) ? 1 : 0.25);
+  svg.selectAll('.link')
+    .attr('class', l => {
+      const src = String(l.source.id || l.source);
+      const tgt = String(l.target.id || l.target);
+      return (src === d.id || tgt === d.id) ? 'link highlighted' : 'link';
+    })
+    .attr('stroke-opacity', l => {
+      const src = String(l.source.id || l.source);
+      const tgt = String(l.target.id || l.target);
+      return (src === d.id || tgt === d.id) ? 0.9 : 0.1;
+    });
+
+  // Click on empty space to deselect
+  setTimeout(() => {
+    svg.on('click.deselect', () => {
+      svg.selectAll('.node circle').attr('opacity', 1);
+      svg.selectAll('.link').attr('class', 'link').attr('stroke-opacity', 0.5);
+      svg.on('click.deselect', null);
+    });
+  }, 100);
+}
+
+function addToCRM(id, pseudo) {
+  hideTooltip();
+  window.open(`https://fabriceemonnet-web.github.io/gestion-lead-crm/`, '_blank');
+  alert(`Ouvre le Lead Management et crée une fiche pour ${pseudo} (ID Wyldde: ${id})`);
+}
+
+function resetZoom() {
+  svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
+}
+
+function openImport() { document.getElementById('importBg').style.display = 'flex'; }
+function closeImport() { document.getElementById('importBg').style.display = 'none'; }
+function closeImportBg(e) { if (e.target.id === 'importBg') closeImport(); }
+
+// Init
+loadCRM();
+loadGraph();
+renderGraph();
+
+window.addEventListener('resize', () => renderGraph());
+</script>
+</body>
+</html>

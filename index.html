@@ -149,6 +149,7 @@ details[open] summary::after { transform: rotate(90deg); }
     <button class="btn" id="btnSave" onclick="saveToDrive()" style="display:none"><i class="ti ti-cloud-upload"></i> Sauvegarder</button>
     <button class="btn" id="btnLoad" onclick="loadFromDrive()" style="display:none"><i class="ti ti-cloud-download"></i> Charger</button>
     <button class="btn btn-wyldde" onclick="openImport()"><i class="ti ti-download"></i> Importer</button>
+    <a href="https://fabriceemonnet-web.github.io/gestion-lead-crm/graph.html" target="_blank" class="btn" style="background:#2d2d8e;color:#fff;border-color:#2d2d8e"><i class="ti ti-hierarchy"></i> Graphe</a>
     <button class="btn btn-primary" onclick="openModal()"><i class="ti ti-plus"></i> Ajouter</button>
   </div>
 </div>
@@ -535,7 +536,7 @@ function doImport(){
     // New profile
     profiles.push({
       id:Date.now().toString()+Math.random(),
-      wylddeId,
+      wylddeId: wylddeId || String(user.id || user.url_id || ''),
       pseudo,
       type:PROFILE_TYPES[user.profile_type]||'',
       dept,ville,

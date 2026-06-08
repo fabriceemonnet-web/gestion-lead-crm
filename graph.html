@@ -630,8 +630,42 @@ function handleClick(event, d) {
 
 function addToCRM(id, pseudo) {
   hideTooltip();
-  window.open(`https://fabriceemonnet-web.github.io/gestion-lead-crm/`, '_blank');
-  alert(`Ouvre le Lead Management et crée une fiche pour ${pseudo} (ID Wyldde: ${id})`);
+  // Récupérer le CRM depuis localStorage
+  let crm = [];
+  try { crm = JSON.parse(localStorage.getItem('wyldde_crm')) || []; } catch(e) {}
+
+  // Vérifier si déjà présent
+  if (crm.find(p => p.wylddeId === id || p.pseudo === pseudo)) {
+    alert(`${pseudo} est déjà dans ton CRM.`);
+    return;
+  }
+
+  // Créer la fiche minimale
+  const newProfile = {
+    id: Date.now().toString(),
+    pseudo: pseudo,
+    wylddeId: id,
+    lien: `https://www.wyylde.com/membres/${id}`,
+    statut: 'nouveau',
+    cdc: 'non',
+    note: 0,
+    lcs: false,
+    tags: [],
+    comment: '',
+    created: new Date().toISOString()
+  };
+
+  crm.push(newProfile);
+  localStorage.setItem('wyldde_crm', JSON.stringify(crm));
+
+  // Mettre à jour le nœud dans le graphe
+  if (graphData.nodes[id]) {
+    graphData.nodes[id].inBase = true;
+    graphData.nodes[id].status = 'nouveau';
+  }
+  save();
+  renderGraph();
+  alert(`${pseudo} ajouté au CRM. Ouvre Lead Management pour compléter sa fiche.`);
 }
 
 function resetZoom() {

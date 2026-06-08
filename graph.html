@@ -187,7 +187,14 @@ async function findGraphFile() {
 }
 async function saveToDrive() {
   if (!driveToken) { alert('Connectez-vous d\'abord à Google Drive.'); return; }
-  const blob = new Blob([JSON.stringify(graphData, null, 2)], { type: 'application/json' });
+  const toSave = {
+    nodes: graphData.nodes,
+    links: graphData.links.map(l => ({
+      source: (l.source && l.source.id) ? l.source.id : l.source,
+      target: (l.target && l.target.id) ? l.target.id : l.target
+    }))
+  };
+  const blob = new Blob([JSON.stringify(toSave, null, 2)], { type: 'application/json' });
   let r;
   if (driveFileId) {
     r = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, { method: 'PATCH', headers: { Authorization: 'Bearer ' + driveToken, 'Content-Type': 'application/json' }, body: blob });
@@ -368,7 +375,16 @@ function doImport() {
 }
 
 function save() {
-  try { localStorage.setItem('wyldde_graph', JSON.stringify(graphData)); } catch(e) {}
+  try {
+    const toSave = {
+      nodes: graphData.nodes,
+      links: graphData.links.map(l => ({
+        source: (l.source && l.source.id) ? l.source.id : l.source,
+        target: (l.target && l.target.id) ? l.target.id : l.target
+      }))
+    };
+    localStorage.setItem('wyldde_graph', JSON.stringify(toSave));
+  } catch(e) {}
 }
 
 function loadGraph() {

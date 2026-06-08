@@ -30,6 +30,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .btn-primary:hover { opacity: 0.85; background: var(--text); }
 .btn-purple { background: #534AB7; color: #fff; border-color: #534AB7; }
 .btn-purple:hover { opacity: 0.85; background: #534AB7; }
+.btn-drive { background: #1D9E75; color: #fff; border-color: #1D9E75; }
+.btn-drive:hover { opacity: 0.85; background: #1D9E75; }
 .btn-active { background: var(--text); color: var(--bg); }
 
 .toolbar { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 8px 1.5rem; display: flex; align-items: center; gap: 10px; flex-shrink: 0; flex-wrap: wrap; }
@@ -48,7 +50,8 @@ svg { width: 100%; height: 100%; }
 .link { stroke: var(--border2); stroke-opacity: 0.5; fill: none; }
 .link.highlighted { stroke: #534AB7; stroke-opacity: 0.8; stroke-width: 2; }
 
-.tooltip { position: absolute; background: var(--bg); border: 0.5px solid var(--border2); border-radius: var(--radius-lg); padding: 12px 14px; font-size: 12px; pointer-events: none; opacity: 0; transition: opacity 0.15s; max-width: 240px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); z-index: 100; }
+.tooltip { position: fixed; background: var(--bg); border: 0.5px solid var(--border2); border-radius: var(--radius-lg); padding: 12px 14px; font-size: 12px; pointer-events: none; opacity: 0; transition: opacity 0.15s; max-width: 240px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); z-index: 100; }
+.tooltip.visible { pointer-events: auto; }
 .tooltip h4 { font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
 .tooltip p { color: var(--text2); margin-bottom: 4px; line-height: 1.4; }
 .tooltip .connections { margin-top: 8px; font-weight: 500; color: var(--text); }
@@ -80,6 +83,9 @@ svg { width: 100%; height: 100%; }
   <div style="font-size:16px;font-weight:600">Graphe de Relations</div>
   <a href="https://fabriceemonnet-web.github.io/gestion-lead-crm/" style="font-size:12px;color:var(--text3);text-decoration:none">← Lead Management</a>
   <div class="header-actions">
+    <button class="btn btn-drive" id="btnDrive" onclick="driveAction()">⬡ <span id="btnDriveLabel">Connecter Drive</span></button>
+    <button class="btn" id="btnSaveDrive" onclick="saveToDrive()" style="display:none">↑ Sauvegarder</button>
+    <button class="btn" id="btnLoadDrive" onclick="loadFromDrive()" style="display:none">↓ Charger</button>
     <button class="btn" id="btnMaBase" onclick="setMode('base')">Ma base uniquement</button>
     <button class="btn btn-active" id="btnDecouverte" onclick="setMode('all')">Mode découverte</button>
     <button class="btn btn-purple" onclick="openImport()">+ Importer témoignages</button>
@@ -133,7 +139,7 @@ svg { width: 100%; height: 100%; }
     <div class="field">
       <label>Ces témoignages appartiennent à quel profil ?</label>
       <select id="importTarget">
-        <option value="me">NaughtyPoppies (moi)</option>
+        <option value="7823839">NaughtyPoppies (moi)</option>
       </select>
     </div>
     <div class="field">
@@ -147,7 +153,81 @@ svg { width: 100%; height: 100%; }
   </div>
 </div>
 
+<script src="https://accounts.google.com/gsi/client" async></script>
 <script>
+// ---- DRIVE ----
+const CLIENT_ID = '479015786418-c3ujd7cihmfk08nl0gkd1uvn69299baq.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+const GRAPH_FILE_NAME = 'wyldde_graph.json';
+
+let driveToken = null, driveFileId = null;
+
+function setDriveStatus(ok) {
+  document.getElementById('btnDriveLabel').textContent = ok ? 'Déconnecter' : 'Connecter Drive';
+  document.getElementById('btnSaveDrive').style.display = ok ? '' : 'none';
+  document.getElementById('btnLoadDrive').style.display = ok ? '' : 'none';
+}
+function driveAction() {
+  if (driveToken) { driveToken = null; driveFileId = null; setDriveStatus(false); return; }
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID, scope: SCOPES,
+    callback: (resp) => {
+      if (resp.error) { alert('Erreur Drive : ' + resp.error); return; }
+      driveToken = resp.access_token;
+      setDriveStatus(true);
+      findGraphFile();
+    }
+  });
+  client.requestAccessToken();
+}
+async function findGraphFile() {
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${GRAPH_FILE_NAME}' and trashed=false&fields=files(id,name)`, { headers: { Authorization: 'Bearer ' + driveToken } });
+  const d = await r.json();
+  if (d.files && d.files.length > 0) driveFileId = d.files[0].id;
+}
+async function saveToDrive() {
+  if (!driveToken) { alert('Connectez-vous d\'abord à Google Drive.'); return; }
+  const blob = new Blob([JSON.stringify(graphData, null, 2)], { type: 'application/json' });
+  let r;
+  if (driveFileId) {
+    r = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, { method: 'PATCH', headers: { Authorization: 'Bearer ' + driveToken, 'Content-Type': 'application/json' }, body: blob });
+  } else {
+    const meta = new Blob([JSON.stringify({ name: GRAPH_FILE_NAME, mimeType: 'application/json' })], { type: 'application/json' });
+    const form = new FormData(); form.append('metadata', meta); form.append('file', blob);
+    r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: { Authorization: 'Bearer ' + driveToken }, body: form });
+    const d = await r.json(); driveFileId = d.id;
+  }
+  if (r.ok) {
+    localStorage.setItem('wyldde_graph', JSON.stringify(graphData));
+    alert('Graphe sauvegardé sur Drive.');
+  } else alert('Erreur sauvegarde Drive.');
+}
+async function loadFromDrive() {
+  if (!driveToken) { alert('Connectez-vous d\'abord.'); return; }
+  if (!driveFileId) { alert('Aucun fichier wyldde_graph.json sur Drive.'); return; }
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, { headers: { Authorization: 'Bearer ' + driveToken } });
+  if (r.ok) {
+    const saved = await r.json();
+    graphData = { nodes: {}, links: [] };
+    loadCRM();
+    // Merge saved data
+    Object.keys(saved.nodes || {}).forEach(id => {
+      const crm = crmProfiles[id];
+      const n = saved.nodes[id];
+      if (crm) { n.inBase = true; n.status = crm.statut || 'nouveau'; n.pseudo = crm.pseudo; }
+      if (!graphData.nodes[id]) graphData.nodes[id] = n;
+    });
+    (saved.links || []).forEach(l => {
+      const src = String(l.source.id || l.source);
+      const tgt = String(l.target.id || l.target);
+      graphData.links.push({ source: src, target: tgt });
+    });
+    localStorage.setItem('wyldde_graph', JSON.stringify(graphData));
+    renderGraph();
+    alert('Graphe chargé depuis Drive.');
+  } else alert('Erreur chargement Drive.');
+}
+
 // ---- DATA ----
 let graphData = { nodes: {}, links: [] };
 let crmProfiles = {};
@@ -465,20 +545,36 @@ function showTooltip(event, d) {
   html += `</div>`;
 
   tip.innerHTML = html;
-  tip.style.opacity = '1';
-  moveTooltip(event);
-}
 
-function moveTooltip(event) {
-  const tip = document.getElementById('tooltip');
-  const x = event.offsetX + 15;
-  const y = event.offsetY - 10;
+  // Position fixe calculée au mouseover — ne suit plus la souris
+  const margin = 12;
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  let x = event.clientX + margin;
+  let y = event.clientY + margin;
+  // Pré-affichage invisible pour mesurer
+  tip.style.opacity = '0';
   tip.style.left = x + 'px';
   tip.style.top = y + 'px';
+  tip.classList.add('visible');
+
+  requestAnimationFrame(() => {
+    const tw = tip.offsetWidth;
+    const th = tip.offsetHeight;
+    if (x + tw > W - margin) x = event.clientX - tw - margin;
+    if (y + th > H - margin) y = event.clientY - th - margin;
+    tip.style.left = x + 'px';
+    tip.style.top = y + 'px';
+    tip.style.opacity = '1';
+  });
 }
 
+function moveTooltip() { /* tooltip fixe, ne suit plus la souris */ }
+
 function hideTooltip() {
-  document.getElementById('tooltip').style.opacity = '0';
+  const tip = document.getElementById('tooltip');
+  tip.style.opacity = '0';
+  tip.classList.remove('visible');
 }
 
 function handleClick(event, d) {

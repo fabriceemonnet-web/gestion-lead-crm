@@ -51,7 +51,7 @@ svg { width: 100%; height: 100%; }
 .link.highlighted { stroke: #534AB7; stroke-opacity: 0.8; stroke-width: 2; }
 
 .tooltip { position: fixed; background: var(--bg); border: 0.5px solid var(--border2); border-radius: var(--radius-lg); padding: 12px 14px; font-size: 12px; pointer-events: none; opacity: 0; transition: opacity 0.15s; max-width: 240px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); z-index: 100; }
-.tooltip.visible { pointer-events: auto; }
+.tooltip.visible { pointer-events: auto; opacity: 1; }
 .tooltip h4 { font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
 .tooltip p { color: var(--text2); margin-bottom: 4px; line-height: 1.4; }
 .tooltip .connections { margin-top: 8px; font-weight: 500; color: var(--text); }
@@ -75,6 +75,12 @@ svg { width: 100%; height: 100%; }
 .empty-state { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text2); gap: 12px; }
 .empty-state h3 { font-size: 18px; font-weight: 500; color: var(--text); }
 .empty-state p { font-size: 14px; max-width: 400px; text-align: center; line-height: 1.6; }
+
+.search-box { font-family: inherit; font-size: 13px; color: var(--text); background: var(--bg2); border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 5px 10px; width: 180px; outline: none; }
+.search-box:focus { border-color: var(--text3); background: var(--bg); }
+.node.dimmed circle { opacity: 0.15; }
+.node.dimmed text { opacity: 0.15; }
+.node.found circle { stroke: #EF9F27 !important; stroke-width: 4 !important; }
 </style>
 </head>
 <body>
@@ -105,6 +111,7 @@ svg { width: 100%; height: 100%; }
       Taille bulle = nombre de connexions
     </div>
   </div>
+  <input type="text" class="search-box" id="searchNode" placeholder="🔍 Rechercher un pseudo..." oninput="searchGraph(this.value)" style="margin-left:auto">
 </div>
 
 <div class="graph-container" id="graphContainer">
@@ -538,7 +545,10 @@ function nodeColor(d) {
   return STATUS_COLORS[d.status] || STATUS_COLORS.nouveau;
 }
 
+let tooltipTimeout = null;
+
 function showTooltip(event, d) {
+  if (tooltipTimeout) { clearTimeout(tooltipTimeout); tooltipTimeout = null; }
   const tip = document.getElementById('tooltip');
   const inBase = d.inBase || d.isMe;
   const unknown = !inBase;
@@ -562,14 +572,11 @@ function showTooltip(event, d) {
 
   tip.innerHTML = html;
 
-  // Position fixe calculée au mouseover — ne suit plus la souris
   const margin = 12;
   const W = window.innerWidth;
   const H = window.innerHeight;
   let x = event.clientX + margin;
   let y = event.clientY + margin;
-  // Pré-affichage invisible pour mesurer
-  tip.style.opacity = '0';
   tip.style.left = x + 'px';
   tip.style.top = y + 'px';
   tip.classList.add('visible');
@@ -581,16 +588,21 @@ function showTooltip(event, d) {
     if (y + th > H - margin) y = event.clientY - th - margin;
     tip.style.left = x + 'px';
     tip.style.top = y + 'px';
-    tip.style.opacity = '1';
   });
+
+  // Reste visible si la souris entre dans le tooltip
+  tip.onmouseenter = () => { if (tooltipTimeout) { clearTimeout(tooltipTimeout); tooltipTimeout = null; } };
+  tip.onmouseleave = () => { hideTooltip(); };
 }
 
-function moveTooltip() { /* tooltip fixe, ne suit plus la souris */ }
+function moveTooltip() { /* tooltip fixe */ }
 
 function hideTooltip() {
-  const tip = document.getElementById('tooltip');
-  tip.style.opacity = '0';
-  tip.classList.remove('visible');
+  tooltipTimeout = setTimeout(() => {
+    const tip = document.getElementById('tooltip');
+    tip.classList.remove('visible');
+    tip.style.opacity = '0';
+  }, 250);
 }
 
 function handleClick(event, d) {
@@ -668,7 +680,38 @@ function addToCRM(id, pseudo) {
   alert(`${pseudo} ajouté au CRM. Ouvre Lead Management pour compléter sa fiche.`);
 }
 
-function resetZoom() {
+function searchGraph(query) {
+  const q = query.trim().toLowerCase();
+  const nodeEls = d3.select('#graphSvg').selectAll('.node');
+
+  if (!q) {
+    nodeEls.classed('dimmed', false).classed('found', false);
+    return;
+  }
+
+  let foundNode = null;
+  nodeEls.each(function(d) {
+    const match = d.pseudo.toLowerCase().includes(q);
+    d3.select(this).classed('dimmed', !match).classed('found', match);
+    if (match && !foundNode) foundNode = d;
+  });
+
+  // Centrer sur le premier résultat trouvé
+  if (foundNode && foundNode.x != null) {
+    const container = document.getElementById('graphContainer');
+    const W = container.clientWidth;
+    const H = container.clientHeight;
+    const scale = 1.5;
+    const tx = W / 2 - foundNode.x * scale;
+    const ty = H / 2 - foundNode.y * scale;
+    svg.transition().duration(500).call(
+      zoom.transform,
+      d3.zoomIdentity.translate(tx, ty).scale(scale)
+    );
+  }
+}
+
+
   svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
 }
 
@@ -680,6 +723,15 @@ function closeImportBg(e) { if (e.target.id === 'importBg') closeImport(); }
 loadCRM();
 loadGraph();
 renderGraph();
+
+// Lire paramètre URL search (depuis CRM)
+const urlParams = new URLSearchParams(window.location.search);
+const urlSearch = urlParams.get('search');
+if (urlSearch) {
+  const box = document.getElementById('searchNode');
+  box.value = urlSearch;
+  setTimeout(() => searchGraph(urlSearch), 800);
+}
 
 window.addEventListener('resize', () => renderGraph());
 </script>

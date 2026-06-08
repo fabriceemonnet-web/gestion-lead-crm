@@ -657,6 +657,7 @@ function render(){
         ${p.date?`<div style="font-size:11px;color:var(--text3);margin-top:4px"><i class="ti ti-clock" style="font-size:12px;vertical-align:-1px"></i> Dernier contact : ${p.date}</div>`:''}
         <div class="card-footer">
           <button class="btn" onclick="openModal('${p.id}')"><i class="ti ti-edit"></i> Modifier</button>
+          ${p.wylddeId ? `<a href="https://fabriceemonnet-web.github.io/gestion-lead-crm/graph.html?search=${encodeURIComponent(p.pseudo)}" target="_blank" class="btn" style="color:var(--text2)"><i class="ti ti-hierarchy"></i> Graphe</a>` : ''}
         </div>
       </div>`;
     }).join('');

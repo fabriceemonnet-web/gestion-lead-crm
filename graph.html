@@ -606,8 +606,8 @@ function hideTooltip() {
 }
 
 function handleClick(event, d) {
-  // Highlight connected nodes
-  const svg = d3.select('#graphSvg');
+  event.stopPropagation();
+  const svgEl = d3.select('#graphSvg');
   const connectedIds = new Set([d.id]);
   graphData.links.forEach(l => {
     const src = String(l.source.id || l.source);
@@ -616,9 +616,8 @@ function handleClick(event, d) {
     if (tgt === d.id) connectedIds.add(src);
   });
 
-  svg.selectAll('.node circle')
-    .attr('opacity', n => connectedIds.has(n.id) ? 1 : 0.25);
-  svg.selectAll('.link')
+  svgEl.selectAll('.node circle').attr('opacity', n => connectedIds.has(n.id) ? 1 : 0.25);
+  svgEl.selectAll('.link')
     .attr('class', l => {
       const src = String(l.source.id || l.source);
       const tgt = String(l.target.id || l.target);
@@ -629,16 +628,21 @@ function handleClick(event, d) {
       const tgt = String(l.target.id || l.target);
       return (src === d.id || tgt === d.id) ? 0.9 : 0.1;
     });
-
-  // Click on empty space to deselect
-  setTimeout(() => {
-    svg.on('click.deselect', () => {
-      svg.selectAll('.node circle').attr('opacity', 1);
-      svg.selectAll('.link').attr('class', 'link').attr('stroke-opacity', 0.5);
-      svg.on('click.deselect', null);
-    });
-  }, 100);
 }
+
+function deselect() {
+  const svgEl = d3.select('#graphSvg');
+  svgEl.selectAll('.node circle').attr('opacity', 1);
+  svgEl.selectAll('.link').attr('class', 'link').attr('stroke-opacity', 0.5);
+}
+
+// Clic sur le fond du SVG = déselection
+document.getElementById('graphSvg').addEventListener('click', function(e) {
+  if (e.target === this || e.target.tagName === 'svg') deselect();
+});
+
+// Échap = déselection
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { deselect(); hideTooltip(); } });
 
 function addToCRM(id, pseudo) {
   hideTooltip();

@@ -447,27 +447,40 @@ async function loadFromDrive(){
     showToast('Connexion impossible (réseau coupé ou bloqué).',false);
     return;
   }
-  try{
-    if(r.ok){
-      profiles=await r.json();
+  if(r.ok){
+    let loadedProfiles;
+    try{
+      loadedProfiles=await r.json();
+    }catch(parseErr){
+      console.error('loadFromDrive JSON parse exception:',parseErr);
+      showToast('Réponse Drive illisible (JSON corrompu ?).',false);
+      return;
+    }
+    profiles=loadedProfiles;
+    try{
       localStorage.setItem('wyldde_crm',JSON.stringify(profiles));
+    }catch(storageErr){
+      console.error('localStorage write exception:',storageErr);
+    }
+    const t=new Date().toLocaleTimeString('fr-FR');
+    try{
       render();
-      const t=new Date().toLocaleTimeString('fr-FR');
       document.getElementById('lastSync').textContent='Chargé : '+t;
       showToast(profiles.length+' fiche(s) chargée(s) depuis Drive à '+t,true);
-    } else {
-      const errText=await r.text();
-      console.error('Load error:',r.status,errText);
-      if(r.status===401||r.status===403){
-        showToast('Session expirée — reconnecte-toi à Drive.',false);
-        driveToken=null;driveFileId=null;setSyncStatus(false,'Session expirée');
-      } else {
-        showToast('Erreur de chargement Drive ('+r.status+').',false);
-      }
+    }catch(renderErr){
+      console.error('render() exception after load:',renderErr);
+      showToast('Chargé mais erreur d\'affichage : '+renderErr.message,false);
     }
-  }catch(parseErr){
-    console.error('loadFromDrive response-parsing exception:',parseErr);
-    showToast('Réponse Drive illisible (JSON corrompu ?).',false);
+  } else {
+    let errText='';
+    try{errText=await r.text();}catch(e){}
+    console.error('Load error:',r.status,errText);
+    if(r.status===401||r.status===403){
+      showToast('Session expirée — reconnecte-toi à Drive.',false);
+      driveToken=null;driveFileId=null;setSyncStatus(false,'Session expirée');
+    } else {
+      showToast('Erreur de chargement Drive ('+r.status+').',false);
+    }
   }
 }
 

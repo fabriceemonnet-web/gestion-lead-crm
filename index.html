@@ -380,18 +380,40 @@ async function findOrCreateFile(){
 }
 async function saveToDrive(){
   if(!driveToken){showToast('Connecte-toi d\'abord à Google Drive.',false);return;}
+  let r;
   try{
-    const blob=new Blob([JSON.stringify(profiles,null,2)],{type:'application/json'});
-    let r;
+    const jsonStr=JSON.stringify(profiles,null,2);
     if(driveFileId){
-      r=await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`,{method:'PATCH',headers:{Authorization:'Bearer '+driveToken,'Content-Type':'application/json'},body:blob});
+      r=await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`,{
+        method:'PATCH',
+        headers:{Authorization:'Bearer '+driveToken,'Content-Type':'application/json'},
+        body:jsonStr
+      });
     } else {
-      const meta=new Blob([JSON.stringify({name:FILE_NAME,mimeType:'application/json'})],{type:'application/json'});
-      const form=new FormData();form.append('metadata',meta);form.append('file',blob);
-      r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+driveToken},body:form});
-      if(r.ok){const d=await r.json();driveFileId=d.id;}
+      const boundary='-------wyldde'+Date.now();
+      const metaPart=JSON.stringify({name:FILE_NAME,mimeType:'application/json'});
+      const body=
+        '--'+boundary+'\r\n'+
+        'Content-Type: application/json; charset=UTF-8\r\n\r\n'+
+        metaPart+'\r\n'+
+        '--'+boundary+'\r\n'+
+        'Content-Type: application/json\r\n\r\n'+
+        jsonStr+'\r\n'+
+        '--'+boundary+'--';
+      r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{
+        method:'POST',
+        headers:{Authorization:'Bearer '+driveToken,'Content-Type':'multipart/related; boundary='+boundary},
+        body:body
+      });
     }
+  }catch(networkErr){
+    console.error('saveToDrive network exception (fetch failed):',networkErr);
+    showToast('Connexion impossible (réseau coupé ou bloqué).',false);
+    return;
+  }
+  try{
     if(r.ok){
+      if(!driveFileId){const d=await r.json();driveFileId=d.id;}
       localStorage.setItem('wyldde_crm',JSON.stringify(profiles));
       const t=new Date().toLocaleTimeString('fr-FR');
       document.getElementById('lastSync').textContent='Sauvegardé : '+t;
@@ -406,20 +428,26 @@ async function saveToDrive(){
         showToast('Erreur de sauvegarde Drive ('+r.status+').',false);
       }
     }
-  }catch(e){
-    console.error('saveToDrive exception:',e);
-    showToast('Erreur réseau lors de la sauvegarde.',false);
+  }catch(parseErr){
+    console.error('saveToDrive response-parsing exception:',parseErr);
+    showToast('Réponse Drive illisible (vérifie quand même sur Drive).',false);
   }
 }
 async function loadFromDrive(){
   if(!driveToken){showToast('Connecte-toi d\'abord à Google Drive.',false);return;}
-  // Retry the file search in case it wasn't found yet (token refresh, timing, etc.)
   if(!driveFileId){
     await findOrCreateFile();
   }
   if(!driveFileId){showToast('Aucun fichier trouvé sur Drive pour ce compte.',false);return;}
+  let r;
   try{
-    const r=await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`,{headers:{Authorization:'Bearer '+driveToken}});
+    r=await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`,{headers:{Authorization:'Bearer '+driveToken}});
+  }catch(networkErr){
+    console.error('loadFromDrive network exception (fetch failed):',networkErr);
+    showToast('Connexion impossible (réseau coupé ou bloqué).',false);
+    return;
+  }
+  try{
     if(r.ok){
       profiles=await r.json();
       localStorage.setItem('wyldde_crm',JSON.stringify(profiles));
@@ -437,9 +465,9 @@ async function loadFromDrive(){
         showToast('Erreur de chargement Drive ('+r.status+').',false);
       }
     }
-  }catch(e){
-    console.error('loadFromDrive exception:',e);
-    showToast('Erreur réseau lors du chargement.',false);
+  }catch(parseErr){
+    console.error('loadFromDrive response-parsing exception:',parseErr);
+    showToast('Réponse Drive illisible (JSON corrompu ?).',false);
   }
 }
 

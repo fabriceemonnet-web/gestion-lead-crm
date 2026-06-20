@@ -30,8 +30,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .btn-primary:hover { opacity: 0.85; background: var(--text); }
 .btn-purple { background: #534AB7; color: #fff; border-color: #534AB7; }
 .btn-purple:hover { opacity: 0.85; background: #534AB7; }
-.btn-drive { background: #1D9E75; color: #fff; border-color: #1D9E75; }
-.btn-drive:hover { opacity: 0.85; background: #1D9E75; }
 .btn-active { background: var(--text); color: var(--bg); }
 
 .toolbar { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 8px 1.5rem; display: flex; align-items: center; gap: 10px; flex-shrink: 0; flex-wrap: wrap; }
@@ -50,8 +48,7 @@ svg { width: 100%; height: 100%; }
 .link { stroke: var(--border2); stroke-opacity: 0.5; fill: none; }
 .link.highlighted { stroke: #534AB7; stroke-opacity: 0.8; stroke-width: 2; }
 
-.tooltip { position: fixed; background: var(--bg); border: 0.5px solid var(--border2); border-radius: var(--radius-lg); padding: 12px 14px; font-size: 12px; pointer-events: none; opacity: 0; transition: opacity 0.15s; max-width: 240px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); z-index: 100; }
-.tooltip.visible { pointer-events: auto; opacity: 1; }
+.tooltip { position: absolute; background: var(--bg); border: 0.5px solid var(--border2); border-radius: var(--radius-lg); padding: 12px 14px; font-size: 12px; pointer-events: none; opacity: 0; transition: opacity 0.15s; max-width: 240px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); z-index: 100; }
 .tooltip h4 { font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
 .tooltip p { color: var(--text2); margin-bottom: 4px; line-height: 1.4; }
 .tooltip .connections { margin-top: 8px; font-weight: 500; color: var(--text); }
@@ -75,12 +72,6 @@ svg { width: 100%; height: 100%; }
 .empty-state { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text2); gap: 12px; }
 .empty-state h3 { font-size: 18px; font-weight: 500; color: var(--text); }
 .empty-state p { font-size: 14px; max-width: 400px; text-align: center; line-height: 1.6; }
-
-.search-box { font-family: inherit; font-size: 13px; color: var(--text); background: var(--bg2); border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 5px 10px; width: 180px; outline: none; }
-.search-box:focus { border-color: var(--text3); background: var(--bg); }
-.node.dimmed circle { opacity: 0.15; }
-.node.dimmed text { opacity: 0.15; }
-.node.found circle { stroke: #EF9F27 !important; stroke-width: 4 !important; }
 </style>
 </head>
 <body>
@@ -89,9 +80,10 @@ svg { width: 100%; height: 100%; }
   <div style="font-size:16px;font-weight:600">Graphe de Relations</div>
   <a href="https://fabriceemonnet-web.github.io/gestion-lead-crm/" style="font-size:12px;color:var(--text3);text-decoration:none">← Lead Management</a>
   <div class="header-actions">
-    <button class="btn btn-drive" id="btnDrive" onclick="driveAction()">⬡ <span id="btnDriveLabel">Connecter Drive</span></button>
-    <button class="btn" id="btnSaveDrive" onclick="saveToDrive()" style="display:none">↑ Sauvegarder</button>
-    <button class="btn" id="btnLoadDrive" onclick="loadFromDrive()" style="display:none">↓ Charger</button>
+    <span id="graphSyncStatus" style="font-size:11px;color:var(--text3)">Non connecté à Drive</span>
+    <button class="btn" id="btnGraphDrive" onclick="graphDriveAction()">Connecter Drive</button>
+    <button class="btn" id="btnGraphSave" onclick="saveGraphToDrive()" style="display:none">Sauvegarder</button>
+    <button class="btn" id="btnGraphLoad" onclick="loadGraphFromDrive()" style="display:none">Charger</button>
     <button class="btn" id="btnMaBase" onclick="setMode('base')">Ma base uniquement</button>
     <button class="btn btn-active" id="btnDecouverte" onclick="setMode('all')">Mode découverte</button>
     <button class="btn btn-purple" onclick="openImport()">+ Importer témoignages</button>
@@ -111,7 +103,6 @@ svg { width: 100%; height: 100%; }
       Taille bulle = nombre de connexions
     </div>
   </div>
-  <input type="text" class="search-box" id="searchNode" placeholder="🔍 Rechercher un pseudo..." oninput="searchGraph(this.value)" style="margin-left:auto">
 </div>
 
 <div class="graph-container" id="graphContainer">
@@ -146,7 +137,7 @@ svg { width: 100%; height: 100%; }
     <div class="field">
       <label>Ces témoignages appartiennent à quel profil ?</label>
       <select id="importTarget">
-        <option value="7823839">NaughtyPoppies (moi)</option>
+        <option value="me">NaughtyPoppies (moi)</option>
       </select>
     </div>
     <div class="field">
@@ -160,88 +151,7 @@ svg { width: 100%; height: 100%; }
   </div>
 </div>
 
-<script src="https://accounts.google.com/gsi/client" async></script>
 <script>
-// ---- DRIVE ----
-const CLIENT_ID = '479015786418-c3ujd7cihmfk08nl0gkd1uvn69299baq.apps.googleusercontent.com';
-const SCOPES = 'https://www.googleapis.com/auth/drive.file';
-const GRAPH_FILE_NAME = 'wyldde_graph.json';
-
-let driveToken = null, driveFileId = null;
-
-function setDriveStatus(ok) {
-  document.getElementById('btnDriveLabel').textContent = ok ? 'Déconnecter' : 'Connecter Drive';
-  document.getElementById('btnSaveDrive').style.display = ok ? '' : 'none';
-  document.getElementById('btnLoadDrive').style.display = ok ? '' : 'none';
-}
-function driveAction() {
-  if (driveToken) { driveToken = null; driveFileId = null; setDriveStatus(false); return; }
-  const client = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID, scope: SCOPES,
-    callback: (resp) => {
-      if (resp.error) { alert('Erreur Drive : ' + resp.error); return; }
-      driveToken = resp.access_token;
-      setDriveStatus(true);
-      findGraphFile();
-    }
-  });
-  client.requestAccessToken();
-}
-async function findGraphFile() {
-  const r = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${GRAPH_FILE_NAME}' and trashed=false&fields=files(id,name)`, { headers: { Authorization: 'Bearer ' + driveToken } });
-  const d = await r.json();
-  if (d.files && d.files.length > 0) driveFileId = d.files[0].id;
-}
-async function saveToDrive() {
-  if (!driveToken) { alert('Connectez-vous d\'abord à Google Drive.'); return; }
-  const toSave = {
-    nodes: graphData.nodes,
-    links: graphData.links.map(l => ({
-      source: (l.source && l.source.id) ? l.source.id : l.source,
-      target: (l.target && l.target.id) ? l.target.id : l.target
-    }))
-  };
-  const blob = new Blob([JSON.stringify(toSave, null, 2)], { type: 'application/json' });
-  let r;
-  if (driveFileId) {
-    r = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, { method: 'PATCH', headers: { Authorization: 'Bearer ' + driveToken, 'Content-Type': 'application/json' }, body: blob });
-  } else {
-    const meta = new Blob([JSON.stringify({ name: GRAPH_FILE_NAME, mimeType: 'application/json' })], { type: 'application/json' });
-    const form = new FormData(); form.append('metadata', meta); form.append('file', blob);
-    r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: { Authorization: 'Bearer ' + driveToken }, body: form });
-    const d = await r.json(); driveFileId = d.id;
-  }
-  if (r.ok) {
-    localStorage.setItem('wyldde_graph', JSON.stringify(graphData));
-    alert('Graphe sauvegardé sur Drive.');
-  } else alert('Erreur sauvegarde Drive.');
-}
-async function loadFromDrive() {
-  if (!driveToken) { alert('Connectez-vous d\'abord.'); return; }
-  if (!driveFileId) { alert('Aucun fichier wyldde_graph.json sur Drive.'); return; }
-  const r = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, { headers: { Authorization: 'Bearer ' + driveToken } });
-  if (r.ok) {
-    const saved = await r.json();
-    graphData = { nodes: {}, links: [] };
-    loadCRM();
-    // Merge saved data
-    Object.keys(saved.nodes || {}).forEach(id => {
-      const crm = crmProfiles[id];
-      const n = saved.nodes[id];
-      if (crm) { n.inBase = true; n.status = crm.statut || 'nouveau'; n.pseudo = crm.pseudo; }
-      if (!graphData.nodes[id]) graphData.nodes[id] = n;
-    });
-    (saved.links || []).forEach(l => {
-      const src = String(l.source.id || l.source);
-      const tgt = String(l.target.id || l.target);
-      graphData.links.push({ source: src, target: tgt });
-    });
-    localStorage.setItem('wyldde_graph', JSON.stringify(graphData));
-    renderGraph();
-    alert('Graphe chargé depuis Drive.');
-  } else alert('Erreur chargement Drive.');
-}
-
 // ---- DATA ----
 let graphData = { nodes: {}, links: [] };
 let crmProfiles = {};
@@ -290,7 +200,7 @@ function loadCRM() {
           status: p.statut || 'nouveau', inBase: true,
           ages: p.ages, dept: p.dept, ville: p.ville,
           type: p.type, connections: 0,
-          lien: p.lien || (p.wylddeId ? `https://www.wyylde.com/membres/${p.wylddeId}` : '')
+          lien: p.lien || (p.wylddeId ? `https://app.wyylde.com/fr-fr/member/${p.wylddeId}` : '')
         };
       });
     }
@@ -335,7 +245,7 @@ function doImport() {
         id: targetId, pseudo: crm.pseudo,
         status: crm.statut || 'nouveau', inBase: true,
         ages: crm.ages, type: crm.type, connections: 0,
-        lien: crm.lien || `https://www.wyylde.com/membres/${targetId}`
+        lien: crm.lien || `https://app.wyylde.com/fr-fr/member/${targetId}`
       };
     } else {
       graphData.nodes[targetId] = { id: targetId, pseudo: targetId, status: 'unknown', inBase: false, connections: 0 };
@@ -357,7 +267,7 @@ function doImport() {
         inBase: !!crm,
         ages: crm ? crm.ages : [t.p0_age, t.p1_age].filter(Boolean).join('/'),
         type: crm ? crm.type : '',
-        lien: `https://www.wyylde.com/membres/${nodeId}`,
+        lien: `https://app.wyylde.com/fr-fr/member/${nodeId}`,
         connections: 0
       };
       added++;
@@ -382,16 +292,7 @@ function doImport() {
 }
 
 function save() {
-  try {
-    const toSave = {
-      nodes: graphData.nodes,
-      links: graphData.links.map(l => ({
-        source: (l.source && l.source.id) ? l.source.id : l.source,
-        target: (l.target && l.target.id) ? l.target.id : l.target
-      }))
-    };
-    localStorage.setItem('wyldde_graph', JSON.stringify(toSave));
-  } catch(e) {}
+  try { localStorage.setItem('wyldde_graph', JSON.stringify(graphData)); } catch(e) {}
 }
 
 function loadGraph() {
@@ -503,10 +404,9 @@ function renderGraph() {
       .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
       .on('end', (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; })
     )
-    .on('mouseover', showTooltip)
-    .on('mousemove', moveTooltip)
-    .on('mouseout', hideTooltip)
-    .on('click', handleClick);
+    .on('mouseover', showTooltipPreview)
+    .on('mouseout', hideTooltipPreview)
+    .on('click', (event, d) => { event.stopPropagation(); handleClick(event, d); showTooltipFixed(event, d); });
 
   node.append('circle')
     .attr('r', nodeRadius)
@@ -545,14 +445,9 @@ function nodeColor(d) {
   return STATUS_COLORS[d.status] || STATUS_COLORS.nouveau;
 }
 
-let tooltipTimeout = null;
-
-function showTooltip(event, d) {
-  if (tooltipTimeout) { clearTimeout(tooltipTimeout); tooltipTimeout = null; }
-  const tip = document.getElementById('tooltip');
+function buildTooltipHtml(d) {
   const inBase = d.inBase || d.isMe;
   const unknown = !inBase;
-
   let html = `<h4>${d.pseudo}</h4>`;
   if (d.isMe) html += `<p>C'est toi !</p>`;
   else {
@@ -569,45 +464,66 @@ function showTooltip(event, d) {
   if (d.lien && !d.isMe) html += `<a href="${d.lien}" target="_blank" class="btn btn-primary" style="font-size:11px;padding:4px 8px;text-decoration:none">Voir profil</a>`;
   if (unknown && !d.isMe) html += `<button class="btn" style="font-size:11px;padding:4px 8px" onclick="addToCRM('${d.id}','${d.pseudo}')">+ Ajouter au CRM</button>`;
   html += `</div>`;
-
-  tip.innerHTML = html;
-
-  const margin = 12;
-  const W = window.innerWidth;
-  const H = window.innerHeight;
-  let x = event.clientX + margin;
-  let y = event.clientY + margin;
-  tip.style.left = x + 'px';
-  tip.style.top = y + 'px';
-  tip.classList.add('visible');
-
-  requestAnimationFrame(() => {
-    const tw = tip.offsetWidth;
-    const th = tip.offsetHeight;
-    if (x + tw > W - margin) x = event.clientX - tw - margin;
-    if (y + th > H - margin) y = event.clientY - th - margin;
-    tip.style.left = x + 'px';
-    tip.style.top = y + 'px';
-  });
-
-  // Reste visible si la souris entre dans le tooltip
-  tip.onmouseenter = () => { if (tooltipTimeout) { clearTimeout(tooltipTimeout); tooltipTimeout = null; } };
-  tip.onmouseleave = () => { hideTooltip(); };
+  return html;
 }
 
-function moveTooltip() { /* tooltip fixe */ }
+// Lightweight preview on hover: name + status only, never blocks clicks, doesn't follow cursor
+function showTooltipPreview(event, d) {
+  if (tooltipPinned) return; // a fixed tooltip is open, don't show preview
+  const tip = document.getElementById('tooltip');
+  tip.innerHTML = `<h4>${d.pseudo}</h4>`;
+  tip.style.pointerEvents = 'none';
+  positionTooltip(tip, event);
+  tip.style.opacity = '1';
+}
 
-function hideTooltip() {
-  tooltipTimeout = setTimeout(() => {
-    const tip = document.getElementById('tooltip');
-    tip.classList.remove('visible');
-    tip.style.opacity = '0';
-  }, 250);
+function hideTooltipPreview() {
+  if (tooltipPinned) return;
+  document.getElementById('tooltip').style.opacity = '0';
+}
+
+let tooltipPinned = false;
+
+// Full tooltip with clickable buttons, fixed in place on click, closes on outside click
+function showTooltipFixed(event, d) {
+  const tip = document.getElementById('tooltip');
+  tip.innerHTML = buildTooltipHtml(d);
+  tip.style.pointerEvents = 'auto';
+  positionTooltip(tip, event);
+  tip.style.opacity = '1';
+  tooltipPinned = true;
+
+  setTimeout(() => {
+    document.addEventListener('click', closeTooltipFixed, { once: true });
+  }, 0);
+}
+
+function closeTooltipFixed(event) {
+  const tip = document.getElementById('tooltip');
+  if (tip.contains(event.target)) {
+    // clicked inside tooltip (e.g. a link/button) — keep it open, re-arm the listener
+    document.addEventListener('click', closeTooltipFixed, { once: true });
+    return;
+  }
+  tip.style.opacity = '0';
+  tooltipPinned = false;
+}
+
+function positionTooltip(tip, event) {
+  const container = document.getElementById('graphContainer');
+  const rect = container.getBoundingClientRect();
+  let x = event.clientX - rect.left + 15;
+  let y = event.clientY - rect.top - 10;
+  // Keep tooltip within container bounds roughly
+  if (x > rect.width - 260) x = rect.width - 260;
+  if (y < 10) y = 10;
+  tip.style.left = x + 'px';
+  tip.style.top = y + 'px';
 }
 
 function handleClick(event, d) {
-  event.stopPropagation();
-  const svgEl = d3.select('#graphSvg');
+  // Highlight connected nodes
+  const svg = d3.select('#graphSvg');
   const connectedIds = new Set([d.id]);
   graphData.links.forEach(l => {
     const src = String(l.source.id || l.source);
@@ -616,8 +532,9 @@ function handleClick(event, d) {
     if (tgt === d.id) connectedIds.add(src);
   });
 
-  svgEl.selectAll('.node circle').attr('opacity', n => connectedIds.has(n.id) ? 1 : 0.25);
-  svgEl.selectAll('.link')
+  svg.selectAll('.node circle')
+    .attr('opacity', n => connectedIds.has(n.id) ? 1 : 0.25);
+  svg.selectAll('.link')
     .attr('class', l => {
       const src = String(l.source.id || l.source);
       const tgt = String(l.target.id || l.target);
@@ -628,91 +545,21 @@ function handleClick(event, d) {
       const tgt = String(l.target.id || l.target);
       return (src === d.id || tgt === d.id) ? 0.9 : 0.1;
     });
+
+  // Click on empty space to deselect
+  setTimeout(() => {
+    svg.on('click.deselect', () => {
+      svg.selectAll('.node circle').attr('opacity', 1);
+      svg.selectAll('.link').attr('class', 'link').attr('stroke-opacity', 0.5);
+      svg.on('click.deselect', null);
+    });
+  }, 100);
 }
-
-function deselect() {
-  const svgEl = d3.select('#graphSvg');
-  svgEl.selectAll('.node circle').attr('opacity', 1);
-  svgEl.selectAll('.link').attr('class', 'link').attr('stroke-opacity', 0.5);
-}
-
-// Clic sur le fond du SVG = déselection
-document.getElementById('graphSvg').addEventListener('click', function(e) {
-  if (e.target === this || e.target.tagName === 'svg') deselect();
-});
-
-// Échap = déselection
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { deselect(); hideTooltip(); } });
 
 function addToCRM(id, pseudo) {
   hideTooltip();
-  // Récupérer le CRM depuis localStorage
-  let crm = [];
-  try { crm = JSON.parse(localStorage.getItem('wyldde_crm')) || []; } catch(e) {}
-
-  // Vérifier si déjà présent
-  if (crm.find(p => p.wylddeId === id || p.pseudo === pseudo)) {
-    alert(`${pseudo} est déjà dans ton CRM.`);
-    return;
-  }
-
-  // Créer la fiche minimale
-  const newProfile = {
-    id: Date.now().toString(),
-    pseudo: pseudo,
-    wylddeId: id,
-    lien: `https://www.wyylde.com/membres/${id}`,
-    statut: 'nouveau',
-    cdc: 'non',
-    note: 0,
-    lcs: false,
-    tags: [],
-    comment: '',
-    created: new Date().toISOString()
-  };
-
-  crm.push(newProfile);
-  localStorage.setItem('wyldde_crm', JSON.stringify(crm));
-
-  // Mettre à jour le nœud dans le graphe
-  if (graphData.nodes[id]) {
-    graphData.nodes[id].inBase = true;
-    graphData.nodes[id].status = 'nouveau';
-  }
-  save();
-  renderGraph();
-  alert(`${pseudo} ajouté au CRM. Ouvre Lead Management pour compléter sa fiche.`);
-}
-
-function searchGraph(query) {
-  const q = query.trim().toLowerCase();
-  const nodeEls = d3.select('#graphSvg').selectAll('.node');
-
-  if (!q) {
-    nodeEls.classed('dimmed', false).classed('found', false);
-    return;
-  }
-
-  let foundNode = null;
-  nodeEls.each(function(d) {
-    const match = d.pseudo.toLowerCase().includes(q);
-    d3.select(this).classed('dimmed', !match).classed('found', match);
-    if (match && !foundNode) foundNode = d;
-  });
-
-  // Centrer sur le premier résultat trouvé
-  if (foundNode && foundNode.x != null) {
-    const container = document.getElementById('graphContainer');
-    const W = container.clientWidth;
-    const H = container.clientHeight;
-    const scale = 1.5;
-    const tx = W / 2 - foundNode.x * scale;
-    const ty = H / 2 - foundNode.y * scale;
-    svg.transition().duration(500).call(
-      zoom.transform,
-      d3.zoomIdentity.translate(tx, ty).scale(scale)
-    );
-  }
+  window.open(`https://fabriceemonnet-web.github.io/gestion-lead-crm/`, '_blank');
+  alert(`Ouvre le Lead Management et crée une fiche pour ${pseudo} (ID Wyldde: ${id})`);
 }
 
 function resetZoom() {
@@ -723,19 +570,139 @@ function openImport() { document.getElementById('importBg').style.display = 'fle
 function closeImport() { document.getElementById('importBg').style.display = 'none'; }
 function closeImportBg(e) { if (e.target.id === 'importBg') closeImport(); }
 
+// --- Drive sync for graph data ---
+const GRAPH_CLIENT_ID = '479015786418-c3ujd7cihmfk08nl0gkd1uvn69299baq.apps.googleusercontent.com';
+const GRAPH_SCOPES = 'https://www.googleapis.com/auth/drive.file';
+const GRAPH_FILE_NAME = 'wyldde_graph.json';
+let graphDriveToken = null, graphDriveFileId = null;
+
+function setGraphSyncStatus(ok, msg) {
+  document.getElementById('graphSyncStatus').textContent = msg;
+  document.getElementById('btnGraphDrive').textContent = ok ? 'Déconnecter' : 'Connecter Drive';
+  document.getElementById('btnGraphSave').style.display = ok ? '' : 'none';
+  document.getElementById('btnGraphLoad').style.display = ok ? '' : 'none';
+}
+
+function graphDriveAction() {
+  if (graphDriveToken) {
+    graphDriveToken = null; graphDriveFileId = null;
+    setGraphSyncStatus(false, 'Non connecté à Drive');
+    return;
+  }
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: GRAPH_CLIENT_ID, scope: GRAPH_SCOPES,
+    callback: (resp) => {
+      if (resp.error) { setGraphSyncStatus(false, 'Erreur : ' + resp.error); return; }
+      graphDriveToken = resp.access_token;
+      setGraphSyncStatus(true, 'Connecté à Drive');
+      findOrCreateGraphFile();
+    }
+  });
+  client.requestAccessToken();
+}
+
+async function findOrCreateGraphFile() {
+  try {
+    const r = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${GRAPH_FILE_NAME}' and trashed=false&fields=files(id,name)&spaces=drive&corpora=user`, { headers: { Authorization: 'Bearer ' + graphDriveToken } });
+    if (!r.ok) {
+      setGraphSyncStatus(false, 'Erreur Drive — reconnecte-toi');
+      graphDriveToken = null; graphDriveFileId = null;
+      return;
+    }
+    const d = await r.json();
+    if (d.files && d.files.length > 0) {
+      graphDriveFileId = d.files[0].id;
+      setGraphSyncStatus(true, 'Connecté — fichier trouvé');
+    } else {
+      graphDriveFileId = null;
+      setGraphSyncStatus(true, 'Connecté — sera créé à la sauvegarde');
+    }
+  } catch (e) {
+    console.error(e);
+    setGraphSyncStatus(false, 'Erreur réseau Drive');
+  }
+}
+
+async function saveGraphToDrive() {
+  if (!graphDriveToken) { showGraphToast('Connecte-toi d\'abord à Drive.', false); return; }
+  try {
+    const blob = new Blob([JSON.stringify(graphData, null, 2)], { type: 'application/json' });
+    let r;
+    if (graphDriveFileId) {
+      r = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${graphDriveFileId}?uploadType=media`, { method: 'PATCH', headers: { Authorization: 'Bearer ' + graphDriveToken, 'Content-Type': 'application/json' }, body: blob });
+    } else {
+      const meta = new Blob([JSON.stringify({ name: GRAPH_FILE_NAME, mimeType: 'application/json' })], { type: 'application/json' });
+      const form = new FormData(); form.append('metadata', meta); form.append('file', blob);
+      r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: { Authorization: 'Bearer ' + graphDriveToken }, body: form });
+      if (r.ok) { const d = await r.json(); graphDriveFileId = d.id; }
+    }
+    if (r.ok) {
+      save();
+      showGraphToast('Graphe sauvegardé sur Drive.', true);
+    } else {
+      if (r.status === 401 || r.status === 403) {
+        showGraphToast('Session expirée — reconnecte-toi.', false);
+        graphDriveToken = null; graphDriveFileId = null; setGraphSyncStatus(false, 'Session expirée');
+      } else {
+        showGraphToast('Erreur de sauvegarde (' + r.status + ').', false);
+      }
+    }
+  } catch (e) {
+    console.error(e);
+    showGraphToast('Erreur réseau lors de la sauvegarde.', false);
+  }
+}
+
+async function loadGraphFromDrive() {
+  if (!graphDriveToken) { showGraphToast('Connecte-toi d\'abord à Drive.', false); return; }
+  if (!graphDriveFileId) { await findOrCreateGraphFile(); }
+  if (!graphDriveFileId) { showGraphToast('Aucun fichier graphe trouvé sur Drive.', false); return; }
+  try {
+    const r = await fetch(`https://www.googleapis.com/drive/v3/files/${graphDriveFileId}?alt=media`, { headers: { Authorization: 'Bearer ' + graphDriveToken } });
+    if (r.ok) {
+      const loaded = await r.json();
+      graphData = { nodes: {}, links: [] };
+      loadCRM();
+      Object.keys(loaded.nodes || {}).forEach(id => {
+        if (!graphData.nodes[id]) graphData.nodes[id] = loaded.nodes[id];
+      });
+      (loaded.links || []).forEach(l => graphData.links.push(l));
+      save();
+      renderGraph();
+      showGraphToast('Graphe chargé depuis Drive.', true);
+    } else {
+      if (r.status === 401 || r.status === 403) {
+        showGraphToast('Session expirée — reconnecte-toi.', false);
+        graphDriveToken = null; graphDriveFileId = null; setGraphSyncStatus(false, 'Session expirée');
+      } else {
+        showGraphToast('Erreur de chargement (' + r.status + ').', false);
+      }
+    }
+  } catch (e) {
+    console.error(e);
+    showGraphToast('Erreur réseau lors du chargement.', false);
+  }
+}
+
+function showGraphToast(msg, ok) {
+  let t = document.getElementById('graphToastNotif');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'graphToastNotif';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;padding:12px 20px;border-radius:10px;font-size:14px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,0.25);transition:opacity 0.3s;max-width:90vw;text-align:center;color:#fff;';
+    document.body.appendChild(t);
+  }
+  t.style.background = ok ? '#1D9E75' : '#A32D2D';
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(window._graphToastTimeout);
+  window._graphToastTimeout = setTimeout(() => { t.style.opacity = '0'; }, 3500);
+}
+
 // Init
 loadCRM();
 loadGraph();
 renderGraph();
-
-// Lire paramètre URL search (depuis CRM)
-const urlParams = new URLSearchParams(window.location.search);
-const urlSearch = urlParams.get('search');
-if (urlSearch) {
-  const box = document.getElementById('searchNode');
-  box.value = urlSearch;
-  setTimeout(() => searchGraph(urlSearch), 800);
-}
 
 window.addEventListener('resize', () => renderGraph());
 </script>

@@ -356,38 +356,112 @@ function driveAction(){
   client.requestAccessToken();
 }
 async function findOrCreateFile(){
-  const r=await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${FILE_NAME}' and trashed=false&fields=files(id,name)`,{headers:{Authorization:'Bearer '+driveToken}});
-  const d=await r.json();
-  if(d.files&&d.files.length>0){driveFileId=d.files[0].id;setSyncStatus(true,'Connecté — fichier trouvé sur Drive');}
-  else setSyncStatus(true,'Connecté — fichier créé à la première sauvegarde');
+  try{
+    const r=await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${FILE_NAME}' and trashed=false&fields=files(id,name,modifiedTime)&spaces=drive&corpora=user`,{headers:{Authorization:'Bearer '+driveToken}});
+    if(!r.ok){
+      const errText=await r.text();
+      setSyncStatus(false,'Erreur Drive (token expiré ?) — reconnecte-toi');
+      console.error('Drive findOrCreateFile error:',r.status,errText);
+      driveToken=null;driveFileId=null;
+      return;
+    }
+    const d=await r.json();
+    if(d.files&&d.files.length>0){
+      driveFileId=d.files[0].id;
+      setSyncStatus(true,'Connecté — fichier trouvé sur Drive');
+    } else {
+      driveFileId=null;
+      setSyncStatus(true,'Connecté — aucun fichier existant, sera créé à la sauvegarde');
+    }
+  }catch(e){
+    console.error('Drive findOrCreateFile exception:',e);
+    setSyncStatus(false,'Erreur réseau Drive');
+  }
 }
 async function saveToDrive(){
-  if(!driveToken){alert('Connectez-vous d\'abord à Google Drive.');return;}
-  const blob=new Blob([JSON.stringify(profiles,null,2)],{type:'application/json'});
-  let r;
-  if(driveFileId){
-    r=await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`,{method:'PATCH',headers:{Authorization:'Bearer '+driveToken,'Content-Type':'application/json'},body:blob});
-  } else {
-    const meta=new Blob([JSON.stringify({name:FILE_NAME,mimeType:'application/json'})],{type:'application/json'});
-    const form=new FormData();form.append('metadata',meta);form.append('file',blob);
-    r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+driveToken},body:form});
-    const d=await r.json();driveFileId=d.id;
+  if(!driveToken){showToast('Connecte-toi d\'abord à Google Drive.',false);return;}
+  try{
+    const blob=new Blob([JSON.stringify(profiles,null,2)],{type:'application/json'});
+    let r;
+    if(driveFileId){
+      r=await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`,{method:'PATCH',headers:{Authorization:'Bearer '+driveToken,'Content-Type':'application/json'},body:blob});
+    } else {
+      const meta=new Blob([JSON.stringify({name:FILE_NAME,mimeType:'application/json'})],{type:'application/json'});
+      const form=new FormData();form.append('metadata',meta);form.append('file',blob);
+      r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+driveToken},body:form});
+      if(r.ok){const d=await r.json();driveFileId=d.id;}
+    }
+    if(r.ok){
+      localStorage.setItem('wyldde_crm',JSON.stringify(profiles));
+      const t=new Date().toLocaleTimeString('fr-FR');
+      document.getElementById('lastSync').textContent='Sauvegardé : '+t;
+      showToast('Sauvegardé sur Drive à '+t,true);
+    } else {
+      const errText=await r.text();
+      console.error('Save error:',r.status,errText);
+      if(r.status===401||r.status===403){
+        showToast('Session expirée — reconnecte-toi à Drive.',false);
+        driveToken=null;driveFileId=null;setSyncStatus(false,'Session expirée');
+      } else {
+        showToast('Erreur de sauvegarde Drive ('+r.status+').',false);
+      }
+    }
+  }catch(e){
+    console.error('saveToDrive exception:',e);
+    showToast('Erreur réseau lors de la sauvegarde.',false);
   }
-  if(r.ok){
-    localStorage.setItem('wyldde_crm',JSON.stringify(profiles));
-    document.getElementById('lastSync').textContent='Sauvegardé : '+new Date().toLocaleTimeString('fr-FR');
-  } else alert('Erreur sauvegarde Drive.');
 }
 async function loadFromDrive(){
-  if(!driveToken){alert('Connectez-vous d\'abord.');return;}
-  if(!driveFileId){alert('Aucun fichier sur Drive.');return;}
-  const r=await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`,{headers:{Authorization:'Bearer '+driveToken}});
-  if(r.ok){
-    profiles=await r.json();
-    localStorage.setItem('wyldde_crm',JSON.stringify(profiles));
-    render();
-    document.getElementById('lastSync').textContent='Chargé : '+new Date().toLocaleTimeString('fr-FR');
-  } else alert('Erreur chargement Drive.');
+  if(!driveToken){showToast('Connecte-toi d\'abord à Google Drive.',false);return;}
+  // Retry the file search in case it wasn't found yet (token refresh, timing, etc.)
+  if(!driveFileId){
+    await findOrCreateFile();
+  }
+  if(!driveFileId){showToast('Aucun fichier trouvé sur Drive pour ce compte.',false);return;}
+  try{
+    const r=await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`,{headers:{Authorization:'Bearer '+driveToken}});
+    if(r.ok){
+      profiles=await r.json();
+      localStorage.setItem('wyldde_crm',JSON.stringify(profiles));
+      render();
+      const t=new Date().toLocaleTimeString('fr-FR');
+      document.getElementById('lastSync').textContent='Chargé : '+t;
+      showToast(profiles.length+' fiche(s) chargée(s) depuis Drive à '+t,true);
+    } else {
+      const errText=await r.text();
+      console.error('Load error:',r.status,errText);
+      if(r.status===401||r.status===403){
+        showToast('Session expirée — reconnecte-toi à Drive.',false);
+        driveToken=null;driveFileId=null;setSyncStatus(false,'Session expirée');
+      } else {
+        showToast('Erreur de chargement Drive ('+r.status+').',false);
+      }
+    }
+  }catch(e){
+    console.error('loadFromDrive exception:',e);
+    showToast('Erreur réseau lors du chargement.',false);
+  }
+}
+
+// --- Toast notification (works on PC and mobile) ---
+function showToast(msg,ok){
+  let t=document.getElementById('toastNotif');
+  if(!t){
+    t=document.createElement('div');
+    t.id='toastNotif';
+    t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;padding:12px 20px;border-radius:10px;font-size:14px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,0.25);transition:opacity 0.3s,transform 0.3s;max-width:90vw;text-align:center;';
+    document.body.appendChild(t);
+  }
+  t.style.background=ok?'#1D9E75':'#A32D2D';
+  t.style.color='#fff';
+  t.textContent=msg;
+  t.style.opacity='1';
+  t.style.transform='translateX(-50%) translateY(0)';
+  clearTimeout(window._toastTimeout);
+  window._toastTimeout=setTimeout(()=>{
+    t.style.opacity='0';
+    t.style.transform='translateX(-50%) translateY(10px)';
+  },3500);
 }
 
 // --- Photo ---
@@ -514,22 +588,29 @@ function doImport(){
     else if(importMode==='cdcenvoye') newCdc=user.crush_mutual?'partage':'envoye';
 
     if(existing){
+      let didUpdate=false;
       // Update CDC if needed
       if(newCdc!=='non'){
         if((existing.cdc==='recu'&&newCdc==='envoye')||(existing.cdc==='envoye'&&newCdc==='recu')){
-          existing.cdc='partage';
-          updated++;
+          existing.cdc='partage';didUpdate=true;
         } else if(existing.cdc==='non'){
-          existing.cdc=newCdc;
-          updated++;
-        } else {
-          skipped++;
+          existing.cdc=newCdc;didUpdate=true;
         }
-      } else {
-        skipped++;
+      }
+      // For Messages/Chat import: always refresh last contact date + comment if newer
+      if(importMode==='conv'&&lastDate&&(!existing.date||lastDate>existing.date)){
+        existing.date=lastDate;
+        if(lastMsg) existing.comment=lastMsg;
+        didUpdate=true;
       }
       // Always update wylddeId if missing
-      if(!existing.wylddeId&&wylddeId) existing.wylddeId=wylddeId;
+      if(!existing.wylddeId&&wylddeId){existing.wylddeId=wylddeId;didUpdate=true;}
+      // Fix legacy broken link format
+      if(existing.lien&&existing.lien.includes('www.wyylde.com/membres/')&&wylddeId){
+        existing.lien='https://app.wyylde.com/fr-fr/member/'+wylddeId;
+        didUpdate=true;
+      }
+      if(didUpdate) updated++; else skipped++;
       return;
     }
 
@@ -547,7 +628,7 @@ function doImport(){
       comment:lastMsg,
       date:lastDate,
       created:new Date().toISOString(),
-      lien:'https://www.wyylde.com/membres/'+(user.url_id||user.id||pseudo),
+      lien: wylddeId ? 'https://app.wyylde.com/fr-fr/member/'+wylddeId : '',
       photo:null
     });
     added++;
@@ -657,7 +738,6 @@ function render(){
         ${p.date?`<div style="font-size:11px;color:var(--text3);margin-top:4px"><i class="ti ti-clock" style="font-size:12px;vertical-align:-1px"></i> Dernier contact : ${p.date}</div>`:''}
         <div class="card-footer">
           <button class="btn" onclick="openModal('${p.id}')"><i class="ti ti-edit"></i> Modifier</button>
-          ${p.wylddeId ? `<a href="https://fabriceemonnet-web.github.io/gestion-lead-crm/graph.html?search=${encodeURIComponent(p.pseudo)}" target="_blank" class="btn" style="color:var(--text2)"><i class="ti ti-hierarchy"></i> Graphe</a>` : ''}
         </div>
       </div>`;
     }).join('');

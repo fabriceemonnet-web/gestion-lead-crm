@@ -591,6 +591,14 @@ function doImport(){
   let data;
   try{data=JSON.parse(raw);}catch(e){alert('JSON invalide.');return;}
 
+  // Auto-detect import mode from JSON resource field
+  if(data.resource){
+    const res=data.resource.toLowerCase();
+    if(res.includes('crush/sent')||res.includes('crush%2Fsent')) importMode='cdcenvoye';
+    else if(res.includes('crush')) importMode='cdcrecu';
+    else if(res.includes('talk')||res.includes('conversation')) importMode='conv';
+  }
+
   // Parse items
   let items=[];
   if(Array.isArray(data)) items=data;

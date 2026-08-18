@@ -84,8 +84,10 @@ svg { width: 100%; height: 100%; }
     <button class="btn" id="btnGraphDrive" onclick="graphDriveAction()">Connecter Drive</button>
     <button class="btn" id="btnGraphSave" onclick="saveGraphToDrive()" style="display:none">Sauvegarder</button>
     <button class="btn" id="btnGraphLoad" onclick="loadGraphFromDrive()" style="display:none">Charger</button>
+    <input id="nodeSearch" type="text" placeholder="Chercher un pseudo…" oninput="searchNode(this.value)" style="padding:5px 10px;border-radius:8px;border:1px solid var(--border);font-size:13px;width:160px;background:var(--bg2);color:var(--text1)">
     <button class="btn" id="btnMaBase" onclick="setMode('base')">Ma base uniquement</button>
     <button class="btn btn-active" id="btnDecouverte" onclick="setMode('all')">Mode découverte</button>
+    <button class="btn" id="btnToggleDiscussions" onclick="toggleDiscussions()" style="display:none">Discussions : OFF</button>
     <button class="btn btn-purple" onclick="openImport()">+ Importer témoignages</button>
     <button class="btn" onclick="resetZoom()">Recentrer</button>
   </div>
@@ -159,14 +161,14 @@ let displayMode = 'all';
 let simulation, svg, g, zoom;
 
 const STATUS_COLORS = {
-  cible: '#EF9F27',
-  discussion: '#185FA5',
-  rencontre: '#3B6D11',
-  bof: '#5F5E5A',
-  virer: '#A32D2D',
-  nouveau: '#1D9E75',
-  unknown: '#534AB7',
-  me: '#E63946'
+  cible:      '#F4A020',  // orange vif
+  discussion: '#E91E8C',  // rose vif
+  rencontre:  '#00BCD4',  // turquoise flashy
+  bof:        '#888077',  // gris chaud
+  virer:      '#B5172B',  // rouge foncé
+  nouveau:    '#17A589',  // vert menthe
+  unknown:    '#8B5CF6',  // violet clair bien distinct du bleu
+  me:         '#E63946'   // rouge vif
 };
 
 // Load CRM data from localStorage
@@ -280,7 +282,7 @@ function doImport() {
       return k === linkKey;
     });
     if (!exists) {
-      graphData.links.push({ source: targetId, target: nodeId });
+      graphData.links.push({ source: targetId, target: nodeId, type: 'temoignage' });
     }
   });
 
@@ -319,7 +321,7 @@ function loadGraph() {
           const k = [String(el.source.id || el.source), String(el.target.id || el.target)].sort().join('-');
           return k === key;
         });
-        if (!exists) graphData.links.push({ source: src, target: tgt });
+        if (!exists) graphData.links.push({ source: src, target: tgt, type: l.type || 'temoignage' });
       });
     }
   } catch(e) {}
@@ -335,6 +337,13 @@ function setMode(mode) {
 function getFilteredData() {
   let nodes = Object.values(graphData.nodes);
   let links = graphData.links;
+
+  // Filter out discussion links unless toggle is ON
+  const hasDiscussions = links.some(l => l.type === 'discussion');
+  document.getElementById('btnToggleDiscussions').style.display = hasDiscussions ? '' : 'none';
+  if (!showDiscussions) {
+    links = links.filter(l => l.type !== 'discussion');
+  }
 
   if (displayMode === 'base') {
     const baseIds = new Set(nodes.filter(n => n.inBase || n.isMe).map(n => n.id));
@@ -564,6 +573,42 @@ function addToCRM(id, pseudo) {
 
 function resetZoom() {
   svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
+}
+
+// --- Search node by pseudo ---
+function searchNode(query) {
+  if (!query.trim()) {
+    d3.select('#graphSvg').selectAll('.node circle').attr('opacity', 1);
+    return;
+  }
+  const q = query.toLowerCase();
+  const matched = new Set();
+  Object.values(graphData.nodes).forEach(n => {
+    if (n.pseudo.toLowerCase().includes(q)) matched.add(n.id);
+  });
+  d3.select('#graphSvg').selectAll('.node circle')
+    .attr('opacity', n => matched.has(n.id) ? 1 : 0.15);
+  if (matched.size === 1) {
+    const id = [...matched][0];
+    const node = graphData.nodes[id];
+    if (node && node.x !== undefined) {
+      const container = document.getElementById('graphContainer');
+      const W = container.clientWidth, H = container.clientHeight;
+      const scale = 1.5;
+      svg.transition().duration(400).call(zoom.transform,
+        d3.zoomIdentity.translate(W/2 - scale*node.x, H/2 - scale*node.y).scale(scale));
+    }
+  }
+}
+
+// --- Toggle discussions visibility ---
+let showDiscussions = false;
+function toggleDiscussions() {
+  showDiscussions = !showDiscussions;
+  const btn = document.getElementById('btnToggleDiscussions');
+  btn.textContent = 'Discussions : ' + (showDiscussions ? 'ON' : 'OFF');
+  btn.classList.toggle('btn-active', showDiscussions);
+  renderGraph();
 }
 
 function openImport() { document.getElementById('importBg').style.display = 'flex'; }

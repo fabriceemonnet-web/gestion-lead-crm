@@ -230,17 +230,9 @@ function doImport() {
   const profileMatch = resource.match(/\/profile\/(\d+)\/testimonies/);
   if (profileMatch) {
     const detectedId = profileMatch[1];
-    // Find matching node
-    if (graphData.nodes[detectedId]) {
-      targetId = detectedId;
-    } else {
-      // Check crmProfiles
-      const crm = crmProfiles[detectedId];
-      if (crm) targetId = detectedId;
-    }
+    targetId = detectedId; // Toujours utiliser l'ID détecté
     document.getElementById('importTarget').value = targetId;
   } else if (resource === '/testimonies') {
-    // These are NaughtyPoppies own testimonies
     targetId = '7823839';
     document.getElementById('importTarget').value = '7823839';
   }

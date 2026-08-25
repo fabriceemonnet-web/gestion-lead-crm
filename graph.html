@@ -170,39 +170,52 @@ const STATUS_COLORS = {
 // Load CRM data from localStorage
 function loadCRM() {
   try {
-    const d = localStorage.getItem('wyldde_crm');
-    if (d) {
-      const profiles = JSON.parse(d);
-      // Add me node first
-      graphData.nodes['7823839'] = {
-        id: '7823839', pseudo: 'NaughtyPoppies', isMe: true,
-        status: 'me', inBase: true, connections: 0
-      };
-      const sel = document.getElementById('importTarget');
-      profiles.forEach(p => {
-        // Index by wylddeId and pseudo
-        if (p.wylddeId) crmProfiles[p.wylddeId] = p;
-        crmProfiles['pseudo_' + p.pseudo.toLowerCase()] = p;
+    // Toujours ajouter le nœud central NaughtyPoppies
+    graphData.nodes['7823839'] = {
+      id: '7823839', pseudo: 'NaughtyPoppies', isMe: true,
+      status: 'me', inBase: true, connections: 0
+    };
+    crmProfiles['7823839'] = { wylddeId: '7823839', pseudo: 'NaughtyPoppies', statut: 'me' };
 
-        // Use wylddeId if available, otherwise use pseudo as key
-        const nodeId = p.wylddeId || ('pseudo_' + p.pseudo.toLowerCase());
-        const displayId = p.wylddeId || p.pseudo;
-
-        const opt = document.createElement('option');
-        opt.value = nodeId;
-        opt.textContent = p.pseudo;
-        sel.appendChild(opt);
-
-        graphData.nodes[nodeId] = {
-          id: nodeId, pseudo: p.pseudo,
-          status: p.statut || 'nouveau', inBase: true,
-          ages: p.ages, dept: p.dept, ville: p.ville,
-          type: p.type, connections: 0,
-          lien: p.lien || (p.wylddeId ? `https://app.wyylde.com/fr-fr/member/${p.wylddeId}` : '')
-        };
-      });
+    // Lire la version légère écrite par le CRM après chargement Drive
+    const d = localStorage.getItem('wyldde_crm_light');
+    if (!d) {
+      console.warn('Pas de données CRM dans localStorage. Ouvre le CRM, connecte Drive et clique Charger.');
+      return;
     }
-  } catch(e) { console.error(e); }
+    const profiles = JSON.parse(d);
+    const sel = document.getElementById('importTarget');
+
+    profiles.forEach(p => {
+      if (!p.wylddeId && !p.pseudo) return;
+      const nodeId = p.wylddeId || ('pseudo_' + p.pseudo.toLowerCase());
+
+      // Index pour la recherche rapide
+      if (p.wylddeId) crmProfiles[p.wylddeId] = p;
+      crmProfiles['pseudo_' + (p.pseudo||'').toLowerCase()] = p;
+
+      // Option dans le select d'import
+      const opt = document.createElement('option');
+      opt.value = nodeId;
+      opt.textContent = p.pseudo;
+      sel.appendChild(opt);
+
+      // Nœud dans le graphe
+      graphData.nodes[nodeId] = {
+        id: nodeId,
+        pseudo: p.pseudo,
+        status: p.statut || 'nouveau',
+        inBase: true,
+        ages: p.ages || '',
+        dept: p.dept || '',
+        ville: p.ville || '',
+        type: p.type || '',
+        connections: 0,
+        lien: p.lien || (p.wylddeId ? `https://app.wyylde.com/fr-fr/member/${p.wylddeId}` : '')
+      };
+    });
+    console.log(`CRM chargé : ${profiles.length} profils`);
+  } catch(e) { console.error('loadCRM error:', e); }
 }
 
 function doImport() {

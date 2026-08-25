@@ -457,6 +457,20 @@ async function loadFromDrive(){
       return;
     }
     profiles=loadedProfiles;
+    // Écriture version légère pour le graphe (sans photos)
+    try{
+      const light=profiles.map(p=>({
+        wylddeId:p.wylddeId||'',
+        pseudo:p.pseudo||'',
+        statut:p.statut||'nouveau',
+        lien:p.lien||'',
+        ages:p.ages||'',
+        dept:p.dept||'',
+        ville:p.ville||'',
+        type:p.type||''
+      }));
+      localStorage.setItem('wyldde_crm_light',JSON.stringify(light));
+    }catch(e){console.error('localStorage light write error:',e);}
     const t=new Date().toLocaleTimeString('fr-FR');
     try{
       render();

@@ -384,6 +384,16 @@ function getFilteredData() {
     });
   }
 
+  // Build nodeId set for fast lookup
+  const nodeIds = new Set(nodes.map(n => n.id));
+
+  // Remove orphan links (source or target node missing) — prevents D3 crash
+  links = links.filter(l => {
+    const src = String(l.source.id || l.source);
+    const tgt = String(l.target.id || l.target);
+    return nodeIds.has(src) && nodeIds.has(tgt);
+  });
+
   // Count connections
   const connCount = {};
   links.forEach(l => {
@@ -406,7 +416,7 @@ function renderGraph() {
   document.getElementById('statBase').textContent = nodes.filter(n => n.inBase || n.isMe).length;
   document.getElementById('statUnknown').textContent = nodes.filter(n => !n.inBase && !n.isMe).length;
 
-  document.getElementById('emptyState').style.display = links.length === 0 && nodes.length <= 1 ? 'flex' : 'none';
+  document.getElementById('emptyState').style.display = nodes.length === 0 ? 'flex' : 'none';
 
   const container = document.getElementById('graphContainer');
   const W = container.clientWidth;

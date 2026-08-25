@@ -302,20 +302,45 @@ function loadGraph() {
     const d = localStorage.getItem('wyldde_graph');
     if (d) {
       const saved = JSON.parse(d);
-      // Merge with CRM data
+
+      // Migrate old 'me' node to proper ID
+      if (saved.nodes['me'] && !saved.nodes['7823839']) {
+        saved.nodes['7823839'] = saved.nodes['me'];
+        saved.nodes['7823839'].id = '7823839';
+        saved.nodes['7823839'].pseudo = 'NaughtyPoppies';
+        saved.nodes['7823839'].isMe = true;
+        saved.nodes['7823839'].status = 'me';
+      }
+      delete saved.nodes['me'];
+
+      // Migrate old 'me' references in links
+      saved.links = saved.links.map(l => ({
+        ...l,
+        source: (l.source === 'me' || l.source?.id === 'me') ? '7823839' : String(l.source.id || l.source),
+        target: (l.target === 'me' || l.target?.id === 'me') ? '7823839' : String(l.target.id || l.target)
+      }));
+
+      // Merge nodes — always update status/inBase from current CRM data
       Object.keys(saved.nodes).forEach(id => {
         const crm = crmProfiles[id];
+        const node = saved.nodes[id];
         if (crm) {
-          saved.nodes[id].inBase = true;
-          saved.nodes[id].status = crm.statut || 'nouveau';
-          saved.nodes[id].ages = crm.ages;
-          saved.nodes[id].type = crm.type;
+          node.inBase = true;
+          node.status = crm.statut || 'nouveau';
+          node.ages = crm.ages;
+          node.type = crm.type;
+          node.lien = crm.lien || (crm.wylddeId ? `https://app.wyylde.com/fr-fr/member/${crm.wylddeId}` : node.lien);
+          node.pseudo = crm.pseudo || node.pseudo;
         }
-        if (!graphData.nodes[id]) graphData.nodes[id] = saved.nodes[id];
+        // Always overwrite graphData node to get fresh CRM data
+        graphData.nodes[id] = node;
       });
+
+      // Merge links
       saved.links.forEach(l => {
         const src = String(l.source.id || l.source);
         const tgt = String(l.target.id || l.target);
+        if (!src || !tgt || src === tgt) return;
         const key = [src, tgt].sort().join('-');
         const exists = graphData.links.find(el => {
           const k = [String(el.source.id || el.source), String(el.target.id || el.target)].sort().join('-');
@@ -323,8 +348,11 @@ function loadGraph() {
         });
         if (!exists) graphData.links.push({ source: src, target: tgt, type: l.type || 'temoignage' });
       });
+
+      // Persist the migrated data
+      save();
     }
-  } catch(e) {}
+  } catch(e) { console.error('loadGraph error:', e); }
 }
 
 function setMode(mode) {
@@ -566,9 +594,8 @@ function handleClick(event, d) {
 }
 
 function addToCRM(id, pseudo) {
-  hideTooltip();
-  window.open(`https://fabriceemonnet-web.github.io/gestion-lead-crm/`, '_blank');
-  alert(`Ouvre le Lead Management et crée une fiche pour ${pseudo} (ID Wyldde: ${id})`);
+  const url = `https://fabriceemonnet-web.github.io/gestion-lead-crm/?add=${encodeURIComponent(id)}&pseudo=${encodeURIComponent(pseudo)}`;
+  window.open(url, '_blank');
 }
 
 function resetZoom() {
@@ -632,6 +659,10 @@ function graphDriveAction() {
   if (graphDriveToken) {
     graphDriveToken = null; graphDriveFileId = null;
     setGraphSyncStatus(false, 'Non connecté à Drive');
+    return;
+  }
+  if (typeof google === 'undefined' || !google.accounts) {
+    showGraphToast('Le script Google n\'est pas encore chargé, réessaie dans 2 secondes.', false);
     return;
   }
   const client = google.accounts.oauth2.initTokenClient({

@@ -382,7 +382,7 @@ async function saveToDrive(){
   if(!driveToken){showToast('Connecte-toi d\'abord à Google Drive.',false);return;}
   let r;
   try{
-    const jsonStr=JSON.stringify(profiles,null,2);
+    const jsonStr=JSON.stringify(stripPhotos(profiles),null,2);
     if(driveFileId){
       r=await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`,{
         method:'PATCH',
@@ -414,7 +414,7 @@ async function saveToDrive(){
   try{
     if(r.ok){
       if(!driveFileId){const d=await r.json();driveFileId=d.id;}
-      localStorage.setItem('wyldde_crm',JSON.stringify(profiles));
+      
       const t=new Date().toLocaleTimeString('fr-FR');
       document.getElementById('lastSync').textContent='Sauvegardé : '+t;
       showToast('Sauvegardé sur Drive à '+t,true);
@@ -457,11 +457,6 @@ async function loadFromDrive(){
       return;
     }
     profiles=loadedProfiles;
-    try{
-      localStorage.setItem('wyldde_crm',JSON.stringify(profiles));
-    }catch(storageErr){
-      console.error('localStorage write exception:',storageErr);
-    }
     const t=new Date().toLocaleTimeString('fr-FR');
     try{
       render();
@@ -887,10 +882,13 @@ function saveProfile(){
   save();closeModal();render();
 }
 
-function save(){try{localStorage.setItem('wyldde_crm',JSON.stringify(profiles));}catch(e){}}
-function load(){try{const d=localStorage.getItem('wyldde_crm');if(d)profiles=JSON.parse(d);}catch(e){}}
+function stripPhotos(arr){return arr.map(p=>{const {photo,...rest}=p;return rest;});}
+function save(){} // localStorage désactivé, Drive uniquement
+function load(){} // localStorage désactivé, Drive uniquement
 
-load();render();
+// Pas de localStorage — affiche un message invitant à se connecter à Drive
+render();
+showToast('Connecte-toi à Drive et clique sur Charger pour accéder à tes fiches.',false);
 </script>
 </body>
 </html>

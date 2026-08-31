@@ -874,8 +874,14 @@ function saveProfile(){
   const pseudo=document.getElementById('f_pseudo').value.trim();
   if(!pseudo){alert('Le pseudo est obligatoire.');return;}
   const tags=getSelectedTags();
+  const lien=document.getElementById('f_lien').value.trim();
+  // Extraire le wylddeId depuis le lien si possible
+  const matchId=lien.match(/\/member\/(\d+)/)||lien.match(/\/membres\/(\d+)/)||lien.match(/\/(\d+)\/?$/);
+  const extractedWylddeId=matchId?matchId[1]:'';
+  // Corriger le format du lien si besoin
+  const correctedLien=extractedWylddeId?`https://app.wyylde.com/fr-fr/member/${extractedWylddeId}`:lien;
   const data={
-    pseudo,lien:document.getElementById('f_lien').value.trim(),
+    pseudo,lien:correctedLien,
     prenom1:document.getElementById('f_prenom1').value.trim(),
     prenom2:document.getElementById('f_prenom2').value.trim(),
     type:document.getElementById('f_type').value,
@@ -891,8 +897,13 @@ function saveProfile(){
     date:document.getElementById('f_date').value,
     photo:currentPhoto
   };
-  if(editingId){const i=profiles.findIndex(x=>x.id===editingId);profiles[i]={...profiles[i],...data};}
-  else profiles.push({...data,id:Date.now().toString(),created:new Date().toISOString(),wylddeId:''});
+  if(editingId){
+    const i=profiles.findIndex(x=>x.id===editingId);
+    // Préserver le wylddeId existant, ou utiliser celui extrait du lien
+    const existingWylddeId=profiles[i].wylddeId||extractedWylddeId;
+    profiles[i]={...profiles[i],...data,wylddeId:existingWylddeId};
+  }
+  else profiles.push({...data,id:Date.now().toString(),created:new Date().toISOString(),wylddeId:extractedWylddeId});
   save();closeModal();render();
 }
 
